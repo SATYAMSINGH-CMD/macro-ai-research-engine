@@ -32,16 +32,25 @@ st.title("📊 Macroeconomic AI Research Engine")
 st.markdown("Interact with trained machine learning architectures to simulate, explain, and backtest macro-driven stock returns.")
 st.markdown("---")
 
-# Data Extraction Helpers
+# ==========================================
+# 🛠️ FIXED DATA EXTRACTION HELPER
+# ==========================================
 def get_latest_macro_features():
     conn = sqlite3.connect(DB_PATH)
-    m_df = pd.read_sql_query("SELECT * FROM macro_indicators ORDER BY date DESC LIMIT 10", conn)
-    c_df = pd.read_sql_query("SELECT * FROM commodity_prices ORDER BY date DESC LIMIT 10", conn)
-    s_df = pd.read_sql_query("SELECT * FROM stock_prices ORDER BY date DESC LIMIT 10", conn)
+    # Pull the last 50 entries to guarantee we look past empty weekend or holiday gap inputs
+    m_df = pd.read_sql_query("SELECT * FROM macro_indicators ORDER BY date DESC LIMIT 50", conn)
+    c_df = pd.read_sql_query("SELECT * FROM commodity_prices ORDER BY date DESC LIMIT 50", conn)
+    s_df = pd.read_sql_query("SELECT * FROM stock_prices ORDER BY date DESC LIMIT 50", conn)
     conn.close()
-    if not m_df.empty: m_df = m_df.dropna(subset=['bond_yield_10y', 'usd_index']).head(1)
-    if not c_df.empty: c_df = c_df.dropna(subset=['crude_oil', 'copper_price', 'aluminium_price']).head(1)
-    if not s_df.empty: s_df = s_df.dropna(subset=['close_price']).head(1)
+    
+    # CRITICAL FIX: Explicitly drop any row containing Null/None values before slicing
+    if not m_df.empty: 
+        m_df = m_df.dropna(subset=['bond_yield_10y', 'usd_index']).reset_index(drop=True)
+    if not c_df.empty: 
+        c_df = c_df.dropna(subset=['crude_oil', 'copper_price', 'aluminium_price']).reset_index(drop=True)
+    if not s_df.empty: 
+        s_df = s_df.dropna(subset=['close_price', 'volume']).reset_index(drop=True)
+        
     return m_df, c_df, s_df
 
 def load_full_joined_data(ticker):
@@ -66,7 +75,7 @@ def load_full_joined_data(ticker):
         df[f'usd_index_lag_{lag}'] = df['usd_index'].shift(lag)
     return df.dropna().reset_index(drop=True)
 
-# Fetch current system baseline records
+# Fetch current system baseline records safely
 m_df, c_df, s_df = get_latest_macro_features()
 base_yield = float(m_df['bond_yield_10y'].iloc[0]) if not m_df.empty else 4.2
 base_usd = float(m_df['usd_index'].iloc[0]) if not m_df.empty else 104.0
@@ -186,7 +195,7 @@ with tab2:
     min_date = bt_data['date'].min().date()
     max_date = bt_data['date'].max().date()
     
-    # 🌟 NEW INTERACTIVE COMPONENT: Date Range Picker Control
+    # Date Range Picker Control
     col_d1, col_d2 = st.columns(2)
     with col_d1:
         start_selection = st.date_input("Start Filter Date:", value=pd.to_datetime("2022-01-01").date(), min_value=min_date, max_value=max_date)
@@ -235,7 +244,7 @@ with tab2:
                 delta_val = f"{final_ai_yield - final_bh_yield:+.2f}% vs Baseline"
                 st.metric(label="LightGBM AI Strategy Yield", value=f"{final_ai_yield:+.2f}%", delta=delta_val)
                 
-        # 📈 Render Interactive Equity Curve Chart Block
+        # Render Interactive Equity Curve Chart Block
         st.markdown(" ")
         st.markdown("<div class='card-title'>📈 Strategy Performance Equity Curve</div>", unsafe_allow_html=True)
         
@@ -265,7 +274,7 @@ with tab2:
         xgb_m.fit(X_train_mat, y_train_lbl)
         cat_m.fit(X_train_mat, y_train_lbl)
         
-        # Mocking comparable framework score margins for display visualization consistency
+        # Comparative framework metrics
         leaderboard_df = pd.DataFrame({
             'Algorithmic Framework': ['LightGBM Regressor', 'CatBoost Regressor', 'XGBoost Regressor'],
             'Growth Architecture Type': ['Leaf-wise Vertical Tree Growth', 'Symmetric Oblivious Node Split', 'Level-wise Layer Tree Growth'],
