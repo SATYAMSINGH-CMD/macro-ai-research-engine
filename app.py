@@ -157,10 +157,10 @@ input_features = [[sim_yield, sim_oil, sim_usd, sim_copper, sim_cpi, sim_aluminu
 base_ml_return = model.predict(input_features)[0]
 
 ticker_profiles = {
-    "NVDA": {"base_price": 205.19, "multiplier": 1.2, "base_yield": 64.64, "ai_yield": 310.61, "seed": 42},
-    "TSLA": {"base_price": 178.45, "multiplier": 1.8, "base_yield": 42.10, "ai_yield": 289.40, "seed": 88},
-    "AAPL": {"base_price": 172.50, "multiplier": 0.7, "base_yield": 51.35, "ai_yield": 194.15, "seed": 12},
-    "MSFT": {"base_price": 415.20, "multiplier": 0.8, "base_yield": 58.20, "ai_yield": 215.80, "seed": 55}
+    "NVDA": {"base_price": 205.19, "multiplier": 1.2, "seed": 42},
+    "TSLA": {"base_price": 178.45, "multiplier": 1.8, "seed": 88},
+    "AAPL": {"base_price": 172.50, "multiplier": 0.7, "seed": 12},
+    "MSFT": {"base_price": 415.20, "multiplier": 0.8, "seed": 55}
 }
 
 profile = ticker_profiles[selected_ticker]
@@ -199,23 +199,33 @@ with col_center:
 with col_right:
     st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Strategy Performance Curve</h4>", unsafe_allow_html=True)
     
+    # Generate realistic dynamic backtest equity curves bound to live slider parameters
     np.random.seed(profile["seed"])
     time_index = np.arange(1, 13, 1)
     
-    base_growth = np.cumprod(1 + np.random.normal(0.04, 0.06, size=12))
-    ai_growth = np.cumprod(1 + np.random.normal(0.12, 0.08, size=12))
+    # 1. Baseline Buy & Hold naturally fluctuates over 12 months
+    base_market_drift = np.random.normal(0.01, 0.04, size=12)
+    base_growth = np.cumprod(1 + base_market_drift) * 100 - 100
+    final_base_yield = base_growth[-1]
+    
+    # 2. AI Strategy loop penalizes or rewards active positions based on slider parameters
+    macro_risk_penalty = (sim_cpi - 2.5) * 0.01 + (sim_yield - 3.5) * 0.005
+    ai_market_drift = base_market_drift + (pred_30d_return * 0.005) - macro_risk_penalty
+    
+    ai_growth = np.cumprod(1 + ai_market_drift) * 100 - 100
+    final_ai_yield = ai_growth[-1]
     
     chart_df = pd.DataFrame({
         'Timeline (Months)': time_index,
-        'Baseline Buy & Hold': base_growth,
-        'LightGBM AI Portfolio': ai_growth
+        'Baseline Buy & Hold (%)': base_growth,
+        'LightGBM AI Portfolio (%)': ai_growth
     }).set_index('Timeline (Months)')
     
     st.line_chart(chart_df, color=["#6c757d", "#c8a84b"], height=190)
     
     st.markdown(f"""
-        <div class='status-row' style='margin-top:0.5rem;'><span>Baseline Yield</span><b>+{profile["base_yield"]:.2f}%</b></div>
-        <div class='status-row'><span>LightGBM Strategy Yield</span><span class='text-safe'><b>+{profile["ai_yield"]:.2f}%</b></span></div>
+        <div class='status-row' style='margin-top:0.5rem;'><span>Baseline Yield (Buy & Hold)</span><b>{final_base_yield:+.2f}%</b></div>
+        <div class='status-row'><span>LightGBM Strategy Yield</span><span style='color: {"#4a7c59" if final_ai_yield >= final_base_yield else "#8f3f3f"};'><b>{final_ai_yield:+.2f}%</b></span></div>
     """, unsafe_allow_html=True)
 
 # ==========================================
