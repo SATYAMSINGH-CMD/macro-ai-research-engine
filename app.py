@@ -4,26 +4,30 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 
-# Config configured for full-width layout matching the theme
-st.set_page_config(page_title="Macroeconomic AI Research Engine", layout="wide")
+# Page configuration optimized for a clean, professional dashboard view
+st.set_page_config(page_title="Macro Factor Impact Explorer", layout="wide")
 
 # ==========================================
-# MATERIAL DESERIALIZED THEME STYLE MATRIX
+# STYLING SHEET: CLEAN LIGHT THEME
 # ==========================================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
     
+    /* Remove standard Streamlit structural distractions */
     span[data-testid="stSidebarCollapseButton"], 
     div[data-testid="collapsedControl"],
     header[data-testid="stHeader"] {
         display: none !important;
     }
+    
     .stApp {
         background-color: #ffffff;
         color: #2d2d2d;
         font-family: 'Inter', sans-serif;
     }
+    
+    /* Focus typography strictly on industry-standard slates */
     label, [data-testid="stWidgetLabel"] p {
         color: #1a2238 !important;
         font-family: 'IBM Plex Mono', monospace !important;
@@ -33,6 +37,8 @@ st.markdown("""
     h1, h2, h3, h4, .mono-text {
         font-family: 'IBM Plex Mono', monospace !important;
     }
+    
+    /* Top Header Banner Component */
     .hero-header {
         background-color: #1a2238;
         color: #ffffff;
@@ -55,6 +61,8 @@ st.markdown("""
         max-width: 700px;
         margin: 0 auto;
     }
+    
+    /* Metric Display Cards */
     .metric-card {
         background-color: #f8f9fa;
         border: 1px solid #e9ecef;
@@ -75,6 +83,7 @@ st.markdown("""
         font-weight: 500;
         color: #1a2238;
     }
+    
     .status-row {
         display: flex;
         justify-content: space-between;
@@ -85,63 +94,78 @@ st.markdown("""
     }
     .text-safe { color: #4a7c59; font-weight: 600; }
     .text-crit { color: #8f3f3f; font-weight: 600; }
-    
-    div[data-testid="stTable"] table {
-        color: #2d2d2d !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# SIMULATED MACHINE LEARNING BACKEND ENGINE
-# ==========================================
-@st.cache_resource
-def initialize_advanced_macro_pipeline():
-    np.random.seed(42)
-    n_samples = 1000
-    
-    features_data = pd.DataFrame({
-        'yield_10y': np.random.uniform(1.5, 6.0, size=n_samples),
-        'crude_oil': np.random.uniform(40.0, 120.0, size=n_samples),
-        'usd_idx': np.random.uniform(85.0, 115.0, size=n_samples),
-        'copper': np.random.uniform(2.5, 5.5, size=n_samples),
-        'cpi': np.random.uniform(1.0, 9.0, size=n_samples),
-        'aluminum': np.random.uniform(1500.0, 4000.0, size=n_samples)
-    })
-    
-    base_return = 5.0 + (features_data['usd_idx'] * 0.12) - (features_data['crude_oil'] * 0.05) - (features_data['yield_10y'] * 0.4)
-    features_data['predicted_return'] = base_return + np.random.normal(0, 1.5, size=n_samples)
-    
-    X = features_data[['yield_10y', 'crude_oil', 'usd_idx', 'copper', 'cpi', 'aluminum']]
-    y = features_data['predicted_return']
-    
-    rf = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42, n_jobs=-1)
-    rf.fit(X, y)
-    return rf
-
-model = initialize_advanced_macro_pipeline()
-
-# ==========================================
-# VISUAL HERO HEADER BANNER
-# ==========================================
+# Visual Hero Banner Layout
 st.markdown("""
     <div class='hero-header'>
-        <div class='hero-title'>MACROECONOMIC AI RESEARCH ENGINE</div>
-        <div class='hero-subtitle'>Interact with trained machine learning architectures to simulate, explain, and backtest macro-driven stock returns.</div>
+        <div class='hero-title'>MACRO FACTOR IMPACT EXPLORER</div>
+        <div class='hero-subtitle'>Sector-specific factor sensitivity testing environment mapping asset return variances under custom macroeconomic stress scenarios.</div>
     </div>
 """, unsafe_allow_html=True)
 
-selected_ticker = st.selectbox("Select Asset Target", ["NVDA", "TSLA", "AAPL", "MSFT"])
+# Asset target selector configuration
+selected_ticker = st.selectbox("Asset Target", ["NVDA", "TSLA", "AAPL", "MSFT"])
 st.markdown("---")
 
 # ==========================================
-# LAYOUT STRUCTURE MAP
+# DATA SIMULATION & MODEL PROCESSING
 # ==========================================
-col_left, col_center, col_right = st.columns([30, 40, 30], gap="large")
+@st.cache_resource
+def process_macro_model(ticker):
+    """Generates sector-specific synthetic matrices and extracts model validation parameters."""
+    np.random.seed(hash(ticker) % 10000)
+    n_samples = 1500
+    
+    yield_10y = np.random.uniform(1.5, 6.0, size=n_samples)
+    crude_oil = np.random.uniform(40.0, 120.0, size=n_samples)
+    usd_idx = np.random.uniform(85.0, 115.0, size=n_samples)
+    copper = np.random.uniform(2.5, 5.5, size=n_samples)
+    cpi = np.random.uniform(1.0, 10.0, size=n_samples)
+    aluminum = np.random.uniform(1000.0, 5000.0, size=n_samples)
+    
+    if ticker == "NVDA":
+        target_return = 4.0 - (yield_10y * 0.4) - (cpi * 0.2) + (usd_idx * 0.05) - (crude_oil * 0.01) + (copper * 0.1) + (aluminum * 0.0001)
+    elif ticker == "TSLA":
+        target_return = 5.0 - (crude_oil * 0.06) - (yield_10y * 0.5) - (aluminum * 0.0005) - (cpi * 0.3) + (copper * 0.15) + (usd_idx * 0.02)
+    elif ticker == "AAPL":
+        target_return = 3.5 - (usd_idx * 0.08) - (aluminum * 0.0003) - (copper * 0.4) - (yield_10y * 0.2) - (cpi * 0.1) + (crude_oil * 0.01)
+    else: # MSFT
+        target_return = 3.0 - (yield_10y * 0.3) - (cpi * 0.1) + (usd_idx * 0.03) - (crude_oil * 0.002) + (copper * 0.01) + (aluminum * 0.00001)
 
-# --- COLUMN 1: MACRO SCENARIO SIMULATOR (LEFT) ---
-with col_left:
-    st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Macroeconomic Scenario Simulator</h4>", unsafe_allow_html=True)
+    target_return += np.random.normal(0, 0.8, size=n_samples)
+    
+    df = pd.DataFrame({
+        '10Y Treasury Yield': yield_10y, 'Crude Oil Futures': crude_oil, 'US Dollar Index': usd_idx,
+        'Copper Price': copper, 'CPI Inflation Proxy': cpi, 'Aluminum Price': aluminum,
+        'Target': target_return
+    })
+    
+    features = ['10Y Treasury Yield', 'Crude Oil Futures', 'US Dollar Index', 'Copper Price', 'CPI Inflation Proxy', 'Aluminum Price']
+    X = df[features]
+    y = df['Target']
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    rf = RandomForestRegressor(n_estimators=60, max_depth=12, random_state=42, n_jobs=-1)
+    rf.fit(X_train, y_train)
+    
+    test_r2 = rf.score(X_test, y_test)
+    global_baseline = np.mean(y_train)
+    
+    return rf, global_baseline, test_r2
+
+model, model_baseline, model_r2 = process_macro_model(selected_ticker)
+
+# ==========================================
+# MAIN INTERACTIVE CORE LAYOUT GRID
+# ==========================================
+col_inputs, col_model, col_scenario = st.columns([30, 40, 30], gap="large")
+
+# --- PANEL 1: INPUTS (LEFT) ---
+with col_inputs:
+    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Inputs</h4>", unsafe_allow_html=True)
     
     sim_yield = st.slider("10Y Treasury Yield (%)", 1.50, 6.00, 4.42, 0.01)
     sim_oil = st.slider("Crude Oil Futures ($/bbl)", 40.00, 120.00, 80.75, 0.25)
@@ -150,51 +174,52 @@ with col_left:
     sim_cpi = st.slider("CPI Inflation Proxy (%)", 1.00, 10.00, 3.20, 0.10)
     sim_aluminum = st.slider("Aluminum Price ($/ton)", 1000.0, 5000.0, 2696.0, 10.0)
 
-# Run current slider parameters through core ML regressor matrix
-input_features = [[sim_yield, sim_oil, sim_usd, sim_copper, sim_cpi, sim_aluminum]]
-base_ml_return = model.predict(input_features)[0]
+# Structural data framing preparation for estimator execution loops
+feature_names = ['10Y Treasury Yield', 'Crude Oil Futures', 'US Dollar Index', 'Copper Price', 'CPI Inflation Proxy', 'Aluminum Price']
+live_input_df = pd.DataFrame([[sim_yield, sim_oil, sim_usd, sim_copper, sim_cpi, sim_aluminum]], columns=feature_names)
 
-ticker_profiles = {
-    "NVDA": {"base_price": 205.19, "multiplier": 1.4, "seed": 42},
-    "TSLA": {"base_price": 178.45, "multiplier": 1.9, "seed": 88},
-    "AAPL": {"base_price": 172.50, "multiplier": 0.8, "seed": 12},
-    "MSFT": {"base_price": 415.20, "multiplier": 0.9, "seed": 55}
-}
+# Compute live model inference prediction
+pred_30d_return = model.predict(live_input_df)[0]
 
-profile = ticker_profiles[selected_ticker]
-current_price = profile["base_price"]
-
-pred_30d_return = (base_ml_return - 3.5) * profile["multiplier"]
+ticker_prices = {"NVDA": 205.19, "TSLA": 178.45, "AAPL": 172.50, "MSFT": 415.20}
+current_price = ticker_prices[selected_ticker]
 target_price = current_price * (1.0 + (pred_30d_return / 100.0))
 
-# --- DYNAMIC SHAP ENGINE CALCULATION ---
-# Calculate real mathematical impact variations based on slider deviations from historical baselines
-usd_impact = (sim_usd - 100.0) * 0.15
-oil_impact = (80.0 - sim_oil) * 0.08
-yield_impact = (4.0 - sim_yield) * 0.5
-cpi_impact = (3.0 - sim_cpi) * 0.4
+# --- PANEL 2: MODEL ANALYTICS & RESULTS (CENTER) ---
+# One-factor-at-a-time marginal feature sensitivity analysis
+feature_contributions = {}
+for feature in feature_names:
+    isolated_input = pd.DataFrame([[
+        sim_yield if feature == '10Y Treasury Yield' else 4.42,
+        sim_oil if feature == 'Crude Oil Futures' else 80.75,
+        sim_usd if feature == 'US Dollar Index' else 99.75,
+        sim_copper if feature == 'Copper Price' else 4.48,
+        sim_cpi if feature == 'CPI Inflation Proxy' else 3.20,
+        sim_aluminum if feature == 'Aluminum Price' else 2696.0
+    ]], columns=feature_names)
+    
+    feature_contributions[feature] = model.predict(isolated_input)[0] - model_baseline
 
-impacts = {
-    "Usd Index": usd_impact,
-    "Crude Oil": oil_impact,
-    "10Y Treasury Yield": yield_impact,
-    "CPI Inflation": cpi_impact
-}
-
-# Sort inputs by value to find the real dynamic winners and losers
-sorted_drivers = sorted(impacts.items(), key=lambda item: item[1], reverse=True)
+sorted_drivers = sorted(feature_contributions.items(), key=lambda item: item[1], reverse=True)
 biggest_positive_name, biggest_positive_val = sorted_drivers[0]
 biggest_negative_name, biggest_negative_val = sorted_drivers[-1]
 
-# --- COLUMN 2: AI MODEL ANALYTICS & VISUALS (CENTER) ---
-with col_center:
-    st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>AI Model Analytics for {selected_ticker}</h4>", unsafe_allow_html=True)
+with col_model:
+    st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Model Analytics: {selected_ticker}</h4>", unsafe_allow_html=True)
+    
+    # Corrected vocabulary to acknowledge out-of-sample holdout tracking honestly
+    st.markdown(f"""
+        <div class='metric-card' style='border-left: 4px solid #c8a84b;'>
+            <div class='metric-label'>Out-of-Sample Test Performance</div>
+            <div class='metric-value'>R² = {model_r2:.4f}</div>
+        </div>
+    """, unsafe_allow_html=True)
     
     st.markdown(f"""
         <div class='metric-card'>
-            <div class='metric-label'>Current Market Base Price [{selected_ticker}]</div>
+            <div class='metric-label'>Current Base Price [{selected_ticker}]</div>
             <div class='metric-value'>${current_price:.2f}</div>
-            <div style='font-size:0.8rem; color:#6c757d; margin-top:0.4rem;'>Estimated 30-Day Price Target: <b>${target_price:.2f}</b></div>
+            <div style='font-size:0.8rem; color:#6c757d; margin-top:0.4rem;'>Estimated 30-Day Target: <b>${target_price:.2f}</b></div>
         </div>
         <div class='metric-card'>
             <div class='metric-label'>Predicted 30-Day Return</div>
@@ -204,55 +229,34 @@ with col_center:
         </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("<div style='font-size:0.75rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin-bottom:0.5rem;'>Real-Time Prediction Drivers (SHAP Explanation)</div>", unsafe_allow_html=True)
+    # Cleaned up naming structure to represent the module honestly
+    st.markdown("<div style='font-size:0.75rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin-bottom:0.5rem;'>Factor Sensitivity Ranking (Marginal Contribution Analysis)</div>", unsafe_allow_html=True)
     st.markdown(f"""
         <div style='background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 1rem; border-radius: 4px; font-size:0.85rem;'>
-            <div class='status-row'><span>🟢 Biggest Positive Driver</span><span class='text-safe'>{biggest_positive_name} ({biggest_positive_val:+.2f}% marginal contribution)</span></div>
-            <div class='status-row'><span>🔴 Biggest Negative Driver</span><span class='text-crit'>{biggest_negative_name} ({biggest_negative_val:+.2f}% marginal contribution)</span></div>
+            <div class='status-row'><span>🟢 Biggest Positive Driver</span><span class='text-safe'>{biggest_positive_name} ({biggest_positive_val:+.4f} Δ)</span></div>
+            <div class='status-row'><span>🔴 Biggest Negative Driver</span><span class='text-crit'>{biggest_negative_name} ({biggest_negative_val:+.4f} Δ)</span></div>
         </div>
     """, unsafe_allow_html=True)
 
-# --- COLUMN 3: HISTORICAL STRATEGY PLAYGROUND (RIGHT) ---
-with col_right:
-    st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Strategy Performance Curve</h4>", unsafe_allow_html=True)
+# --- PANEL 3: PROJECTED RESPONSE PROFILE (RIGHT) ---
+with col_scenario:
+    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Projected Response Profile</h4>", unsafe_allow_html=True)
     
-    np.random.seed(profile["seed"])
     months = np.arange(1, 13, 1)
     
-    # Baseline Buy & Hold returns calculation (Controlled linear scales)
-    baseline_monthly_returns = np.random.normal(0.008, 0.03, size=12)
-    base_growth = np.cumsum(baseline_monthly_returns) * 100
-    final_base_yield = base_growth[-1]
-    
-    # AI Strategy returns directly driven by the live SHAP signal delta bounds
-    alpha_signal_shift = (pred_30d_return * 0.02)
-    ai_monthly_returns = baseline_monthly_returns + alpha_signal_shift + np.random.normal(0, 0.01, size=12)
-    
-    ai_growth = np.cumsum(ai_monthly_returns) * 100
-    final_ai_yield = ai_growth[-1]
+    # Establish flat linear projections
+    base_trajectory = np.cumsum(np.repeat(model_baseline * 0.05, 12))
+    scenario_trajectory = np.cumsum(np.repeat(pred_30d_return * 0.05, 12))
     
     chart_df = pd.DataFrame({
         'Timeline (Months)': months,
-        'Baseline Buy & Hold (%)': base_growth,
-        'LightGBM AI Portfolio (%)': ai_growth
+        'Base Expectation Profile (%)': base_trajectory,
+        'User Scenario Response (%)': scenario_trajectory
     }).set_index('Timeline (Months)')
     
     st.line_chart(chart_df, color=["#6c757d", "#c8a84b"], height=190)
     
     st.markdown(f"""
-        <div class='status-row' style='margin-top:0.5rem;'><span>Baseline Yield (Buy & Hold)</span><b>{final_base_yield:+.2f}%</b></div>
-        <div class='status-row'><span>LightGBM Strategy Yield</span><span style='color: {"#4a7c59" if final_ai_yield >= final_base_yield else "#8f3f3f"};'><b>{final_ai_yield:+.2f}%</b></span></div>
+        <div class='status-row' style='margin-top:0.5rem;'><span>Base Cumulative Expectation</span><b>{base_trajectory[-1]:+.2f}%</b></div>
+        <div class='status-row'><span>Scenario Cumulative Response</span><span style='color: {"#4a7c59" if scenario_trajectory[-1] >= base_trajectory[-1] else "#8f3f3f"};'><b>{scenario_trajectory[-1]:+.2f}%</b></span></div>
     """, unsafe_allow_html=True)
-
-# ==========================================
-# LOWER MULTI-MODEL LEADERBOARD ROW
-# ==========================================
-st.markdown("<br><h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1rem;'>Multi-Model Accuracy Tournament Leaderboard</h4>", unsafe_allow_html=True)
-
-leaderboard_data = pd.DataFrame({
-    'Algorithmic Framework': ['LightGBM Regressor', 'CutBoost Regressor', 'XGBoost Regressor'],
-    'Growth Architecture Type': ['Leaf-wise Vertical Tree Growth', 'Symmetric Oblivious Node Split', 'Level-wise Layer Tree Growth'],
-    'Cross Validation Error (MAE)': ['7.59%', '8.12%', '8.47%'],
-    'Status Flag': ['🏆 Optimal Winner', '🥈 Competitive Runner', '🥉 Compliant Baseline']
-})
-st.table(leaderboard_data)
