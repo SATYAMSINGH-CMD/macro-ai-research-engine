@@ -156,7 +156,6 @@ with col_left:
 input_features = [[sim_yield, sim_oil, sim_usd, sim_copper, sim_cpi, sim_aluminum]]
 base_ml_return = model.predict(input_features)[0]
 
-# Ticker-specific scaling data matrix dictionary to decouple assets dynamically
 ticker_profiles = {
     "NVDA": {"base_price": 205.19, "multiplier": 1.2, "base_yield": 64.64, "ai_yield": 310.61, "seed": 42},
     "TSLA": {"base_price": 178.45, "multiplier": 1.8, "base_yield": 42.10, "ai_yield": 289.40, "seed": 88},
@@ -167,7 +166,6 @@ ticker_profiles = {
 profile = ticker_profiles[selected_ticker]
 current_price = profile["base_price"]
 
-# Adjust predicted return dynamically based on selected ticker beta multiplier properties
 pred_30d_return = base_ml_return * profile["multiplier"]
 target_price = current_price * (1.0 + (pred_30d_return / 100.0))
 
@@ -184,12 +182,11 @@ with col_center:
         <div class='metric-card'>
             <div class='metric-label'>Predicted 30-Day Return</div>
             <div class='metric-value' style='color: {"#4a7c59" if pred_30d_return >= 0 else "#8f3f3f"};'>
-                {"株" if pred_30d_return >= 0 else ""}{pred_30d_return:.2f}%
+                {"+" if pred_30d_return >= 0 else ""}{pred_30d_return:.2f}%
             </div>
         </div>
     """, unsafe_allow_html=True)
     
-    # Real-Time SHAP Drivers block
     st.markdown("<div style='font-size:0.75rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin-bottom:0.5rem;'>Real-Time Prediction Drivers (SHAP Explanation)</div>", unsafe_allow_html=True)
     st.markdown(f"""
         <div style='background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 1rem; border-radius: 4px; font-size:0.85rem;'>
@@ -202,11 +199,9 @@ with col_center:
 with col_right:
     st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Strategy Performance Curve</h4>", unsafe_allow_html=True)
     
-    # Generate realistic dynamic backtest equity curves based on ticker seed parameters
     np.random.seed(profile["seed"])
     time_index = np.arange(1, 13, 1)
     
-    # Generate dynamic curve lines instead of hardcoded numbers
     base_growth = np.cumprod(1 + np.random.normal(0.04, 0.06, size=12))
     ai_growth = np.cumprod(1 + np.random.normal(0.12, 0.08, size=12))
     
@@ -216,10 +211,8 @@ with col_right:
         'LightGBM AI Portfolio': ai_growth
     }).set_index('Timeline (Months)')
     
-    # Clean up the chart display configurations
     st.line_chart(chart_df, color=["#6c757d", "#c8a84b"], height=190)
     
-    # Render variables dynamically instead of using hardcoded string blocks
     st.markdown(f"""
         <div class='status-row' style='margin-top:0.5rem;'><span>Baseline Yield</span><b>+{profile["base_yield"]:.2f}%</b></div>
         <div class='status-row'><span>LightGBM Strategy Yield</span><span class='text-safe'><b>+{profile["ai_yield"]:.2f}%</b></span></div>
