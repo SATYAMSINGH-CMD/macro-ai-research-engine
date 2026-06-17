@@ -199,21 +199,21 @@ with col_center:
 with col_right:
     st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Strategy Performance Curve</h4>", unsafe_allow_html=True)
     
-    # Completely decoupled simulation modeling
+    # Fully controlled, un-leaked linear simulation array
     np.random.seed(profile["seed"])
     months = np.arange(1, 13, 1)
     
-    # 1. Baseline Buy & Hold calculations run strictly independent
-    baseline_noise = np.random.normal(0.015, 0.05, size=12)
-    base_growth = np.cumprod(1 + baseline_noise) * 100 - 100
+    # 1. Baseline Buy & Hold returns calculation (Controlled linear summation, not exponential products)
+    baseline_monthly_returns = np.random.normal(0.012, 0.035, size=12)
+    base_growth = np.cumsum(baseline_monthly_returns) * 100
     final_base_yield = base_growth[-1]
     
-    # 2. AI Strategy calculation loop factoring conditional input bounds
-    macro_drag = max(-0.08, min(0.08, (3.0 - sim_cpi) * 0.015 + (4.0 - sim_yield) * 0.01))
-    ai_signal = (pred_30d_return / 100.0) + macro_drag
+    # 2. AI Strategy metrics bound cleanly to real alpha percentage metrics
+    macro_drag_coefficient = (sim_cpi - 2.8) * 0.006 + (sim_yield - 4.0) * 0.004
+    alpha_signal_shift = (pred_30d_return * 0.002) - macro_drag_coefficient
     
-    ai_execution_noise = np.random.normal(ai_signal, 0.04, size=12)
-    ai_growth = np.cumprod(1 + ai_execution_noise) * 100 - 100
+    ai_monthly_returns = baseline_monthly_returns + alpha_signal_shift + np.random.normal(0, 0.015, size=12)
+    ai_growth = np.cumsum(ai_monthly_returns) * 100
     final_ai_yield = ai_growth[-1]
     
     chart_df = pd.DataFrame({
