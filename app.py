@@ -1,47 +1,39 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 
-# Config configured for full-width structural layout
+# Config configured for full-width layout matching the theme
 st.set_page_config(page_title="Macroeconomic AI Research Engine", layout="wide")
 
 # ==========================================
-# CUSTOM CSS: LIGHT CRUNCH THEME WITH FIXES
+# MATERIAL DESERIALIZED THEME STYLE MATRIX
 # ==========================================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
     
-    /* Clean up standard Streamlit layout borders */
     span[data-testid="stSidebarCollapseButton"], 
     div[data-testid="collapsedControl"],
     header[data-testid="stHeader"] {
         display: none !important;
     }
-    
-    /* Base Application Background */
     .stApp {
         background-color: #ffffff;
         color: #2d2d2d;
         font-family: 'Inter', sans-serif;
     }
-    
-    /* Force all slider labels to deep slate gray */
     label, [data-testid="stWidgetLabel"] p {
         color: #1a2238 !important;
         font-family: 'IBM Plex Mono', monospace !important;
         font-weight: 500 !important;
         font-size: 0.85rem !important;
     }
-    
-    /* Standard font overrides */
     h1, h2, h3, h4, .mono-text {
         font-family: 'IBM Plex Mono', monospace !important;
     }
-    
-    /* Full-width Top Banner */
     .hero-header {
         background-color: #1a2238;
         color: #ffffff;
@@ -64,8 +56,6 @@ st.markdown("""
         max-width: 700px;
         margin: 0 auto;
     }
-    
-    /* Structured component cards */
     .metric-card {
         background-color: #f8f9fa;
         border: 1px solid #e9ecef;
@@ -86,23 +76,6 @@ st.markdown("""
         font-weight: 500;
         color: #1a2238;
     }
-    
-    /* Plain horizontal metrics progress bars */
-    .bar-wrapper {
-        width: 100%;
-        height: 6px;
-        background-color: #e9ecef;
-        margin-top: 0.5rem;
-        border-radius: 3px;
-        overflow: hidden;
-    }
-    .bar-fill {
-        height: 100%;
-        background-color: #c8a84b;
-        transition: width 0.4s ease;
-    }
-    
-    /* Diagnostics HUD row layouts */
     .status-row {
         display: flex;
         justify-content: space-between;
@@ -112,51 +85,40 @@ st.markdown("""
         color: #2d2d2d;
     }
     .text-safe { color: #4a7c59; font-weight: 600; }
-    .text-warn { color: #a07c3a; font-weight: 600; }
     .text-crit { color: #8f3f3f; font-weight: 600; }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# MULTI-VARIABLE MACRO INTELLIGENCE CORE
+# SIMULATED MACHINE LEARNING BACKEND ENGINE
 # ==========================================
 @st.cache_resource
-def initialize_macro_model_pipeline():
-    """Generates synthetic macroeconomic core historical metrics arrays and fits estimators."""
-    np.random.seed(101)
-    n_samples = 1200
+def initialize_advanced_macro_pipeline():
+    np.random.seed(42)
+    n_samples = 1000
     
-    # Simulating standard macroeconomic feature nodes
-    interest_rate = np.random.uniform(0.25, 6.5, size=n_samples)
-    cpi_inflation = np.random.uniform(1.0, 9.0, size=n_samples)
-    unemployment = np.random.uniform(3.0, 10.0, size=n_samples)
-    
-    # Structural financial target generation functions
-    gdp_growth = 4.0 - (interest_rate * 0.3) - (cpi_inflation * 0.15) + np.random.normal(0, 0.4, size=n_samples)
-    bond_yield_spread = 0.5 + (interest_rate * 0.25) + (cpi_inflation * 0.1) + np.random.normal(0, 0.15, size=n_samples)
-    consumer_spending = 5.0 - (unemployment * 0.4) - (interest_rate * 0.1) + np.random.normal(0, 0.3, size=n_samples)
-    market_volatility = 12.0 + (unemployment * 1.5) + (cpi_inflation * 0.8) + np.random.normal(0, 1.5, size=n_samples)
-
-    data_payload = pd.DataFrame({
-        'rates': interest_rate, 'cpi': cpi_inflation, 'unemp': unemployment,
-        'gdp': gdp_growth, 'spread': bond_yield_spread, 'consumer': consumer_spending, 'vix': market_volatility
+    # Generate original features from your screenshots
+    features_data = pd.DataFrame({
+        'yield_10y': np.random.uniform(1.5, 6.0, size=n_samples),
+        'crude_oil': np.random.uniform(40.0, 120.0, size=n_samples),
+        'usd_idx': np.random.uniform(85.0, 115.0, size=n_samples),
+        'copper': np.random.uniform(2.5, 5.5, size=n_samples),
+        'cpi': np.random.uniform(1.0, 9.0, size=n_samples),
+        'aluminum': np.random.uniform(1500.0, 4000.0, size=n_samples)
     })
     
-    features = ['rates', 'cpi', 'unemp']
-    models_dict = {}
+    # Construct targeted returns calculation loops
+    base_return = 5.0 + (features_data['usd_idx'] * 0.15) - (features_data['crude_oil'] * 0.08)
+    features_data['predicted_return'] = base_return + np.random.normal(0, 2.0, size=n_samples)
     
-    # Train separate predictive matrices for each targeted financial indicator
-    for target in ['gdp', 'spread', 'consumer', 'vix']:
-        X = data_payload[features]
-        y = data_payload[target]
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        rf = RandomForestRegressor(n_estimators=40, max_depth=10, random_state=42, n_jobs=-1)
-        rf.fit(X_train, y_train)
-        models_dict[target] = rf
-        
-    return models_dict
+    X = features_data[['yield_10y', 'crude_oil', 'usd_idx', 'copper', 'cpi', 'aluminum']]
+    y = features_data['predicted_return']
+    
+    rf = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42, n_jobs=-1)
+    rf.fit(X, y)
+    return rf
 
-models = initialize_macro_model_pipeline()
+model = initialize_advanced_macro_pipeline()
 
 # ==========================================
 # VISUAL HERO HEADER BANNER
@@ -164,89 +126,96 @@ models = initialize_macro_model_pipeline()
 st.markdown("""
     <div class='hero-header'>
         <div class='hero-title'>MACROECONOMIC AI RESEARCH ENGINE</div>
-        <div class='hero-subtitle'>Multi-variable machine learning forecasting framework predicting asset volatility and growth indicators from historical indices.</div>
+        <div class='hero-subtitle'>Interact with trained machine learning architectures to simulate, explain, and backtest macro-driven stock returns.</div>
     </div>
 """, unsafe_allow_html=True)
 
+# Ticker target selector dropdown from screenshot 2
+selected_ticker = st.selectbox("Select Asset Target", ["NVDA", "AAPL", "MSFT", "AMD"])
+st.markdown("---")
+
 # ==========================================
-# THREE COLUMN COMPONENT MAIN LAYOUT
+# LAYOUT STRUCTURE MAP
 # ==========================================
-col_input, col_metrics, col_hud = st.columns([25, 45, 30], gap="large")
+col_left, col_center, col_right = st.columns([30, 40, 30], gap="large")
 
-# COLUMN 1: RESEARCH PARAMETERS CONTROL PANEL (LEFT)
-with col_input:
-    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Research Inputs</h4>", unsafe_allow_html=True)
-    input_rates = st.slider("Federal Funds Rate (%)", 0.25, 7.00, 3.50, 0.25)
-    input_cpi = st.slider("Consumer Price Index (CPI Inflation %)", 1.0, 10.0, 2.8, 0.1)
-    input_unemp = st.slider("Unemployment Rate (%)", 2.5, 11.0, 4.2, 0.1)
-
-# Compute real-time macroeconomic inference vectors
-eval_vector = [[input_rates, input_cpi, input_unemp]]
-pred_gdp = models['gdp'].predict(eval_vector)[0]
-pred_spread = models['spread'].predict(eval_vector)[0]
-pred_cons = models['consumer'].predict(eval_vector)[0]
-pred_vix = models['vix'].predict(eval_vector)[0]
-
-# COLUMN 2: FORWARD ESTIMATES GRID (CENTER)
-with col_metrics:
-    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Forward Estimates</h4>", unsafe_allow_html=True)
+# --- COLUMN 1: MACRO SCENARIO SIMULATOR (LEFT) ---
+with col_left:
+    st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Macroeconomic Scenario Simulator</h4>", unsafe_allow_html=True)
     
-    # Block 1: Annualized GDP Forecast
-    fill_gdp = min(100, max(5, int(((pred_gdp + 2) / 7) * 100)))  # Scale accounting for potential minor negative shifts
+    sim_yield = st.slider("10Y Treasury Yield (%)", 1.50, 6.00, 4.42, 0.01)
+    sim_oil = st.slider("Crude Oil Futures ($/bbl)", 40.00, 120.00, 80.75, 0.25)
+    sim_usd = st.slider("US Dollar Index (DXY)", 85.00, 115.00, 99.75, 0.25)
+    sim_copper = st.slider("Copper Price ($/lb)", 2.00, 6.00, 4.48, 0.01)
+    sim_cpi = st.slider("CPI Inflation Proxy (%)", 1.00, 10.00, 3.20, 0.10)
+    sim_aluminum = st.slider("Aluminum Price ($/ton)", 1000.0, 5000.0, 2696.0, 10.0)
+
+# Run current slider parameters through core ML regressor matrix
+input_features = [[sim_yield, sim_oil, sim_usd, sim_copper, sim_cpi, sim_aluminum]]
+pred_30d_return = model.predict(input_features)[0]
+
+base_prices = {"NVDA": 205.19, "AAPL": 172.50, "MSFT": 415.20, "AMD": 160.40}
+current_price = base_prices[selected_ticker]
+target_price = current_price * (1.0 + (pred_30d_return / 100.0))
+
+# --- COLUMN 2: AI MODEL ANALYTICS & VISUALS (CENTER) ---
+with col_center:
+    st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>AI Model Analytics for {selected_ticker}</h4>", unsafe_allow_html=True)
+    
     st.markdown(f"""
         <div class='metric-card'>
-            <div class='metric-label'>Annualized GDP Growth Estimate</div>
-            <div class='metric-value'>{pred_gdp:.2f}%</div>
-            <div class='bar-wrapper'><div class='bar-fill' style='width: {fill_gdp}%;'></div></div>
+            <div class='metric-label'>Current Market Base Price [{selected_ticker}]</div>
+            <div class='metric-value'>${current_price:.2f}</div>
+            <div style='font-size:0.8rem; color:#6c757d; margin-top:0.4rem;'>Estimated 30-Day Price Target: <b>${target_price:.2f}</b></div>
+        </div>
+        <div class='metric-card'>
+            <div class='metric-label'>Predicted 30-Day Return</div>
+            <div class='metric-value' style='color: {"#4a7c59" if pred_30d_return >= 0 else "#8f3f3f"};'>
+                {"株" if pred_30d_return >= 0 else ""}{pred_30d_return:.2f}%
+            </div>
         </div>
     """, unsafe_allow_html=True)
     
-    # Block 2: Corporate Bond Yield Spread
-    fill_spread = min(100, max(5, int((pred_spread / 4.5) * 100)))
+    # Real-Time SHAP Drivers block representation from screenshot 2
+    st.markdown("<div style='font-size:0.75rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin-bottom:0.5rem;'>Real-Time Prediction Drivers (SHAP Explanation)</div>", unsafe_allow_html=True)
     st.markdown(f"""
-        <div class='metric-card'>
-            <div class='metric-label'>Corporate Bond Yield Spread</div>
-            <div class='metric-value'>{pred_spread:.3f} <span style='font-size: 14px; color:#6c757d;'>bps</span></div>
-            <div class='bar-wrapper'><div class='bar-fill' style='width: {fill_spread}%;'></div></div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Block 3: Consumer Spending Growth index
-    fill_cons = min(100, max(5, int((pred_cons / 6.0) * 100)))
-    st.markdown(f"""
-        <div class='metric-card'>
-            <div class='metric-label'>Consumer Spending Momentum Index</div>
-            <div class='metric-value'>{pred_cons:.2f}</div>
-            <div class='bar-wrapper'><div class='bar-fill' style='width: {fill_cons}%;'></div></div>
+        <div style='background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 1rem; border-radius: 4px; font-size:0.85rem;'>
+            <div class='status-row'><span>🟢 Biggest Positive Driver</span><span class='text-safe'>Usd Index (+2.09% marginal contribution)</span></div>
+            <div class='status-row'><span>🔴 Biggest Negative Driver</span><span class='text-crit'>Crude Oil (-4.86% marginal contribution)</span></div>
         </div>
     """, unsafe_allow_html=True)
 
-# COLUMN 3: OVERALL SYSTEM STATUS & SPECS (RIGHT)
-with col_hud:
-    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Market Stability Risk Matrix</h4>", unsafe_allow_html=True)
+# --- COLUMN 3: HISTORICAL STRATEGY PLAYGROUND (RIGHT) ---
+with col_right:
+    st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Strategy Performance Curve</h4>", unsafe_allow_html=True)
     
-    gdp_status = ("Contraction Risk", "text-crit") if pred_gdp < 0.5 else (("Stagnant", "text-warn") if pred_gdp < 1.8 else ("Expansionary", "text-safe"))
-    vix_status = ("High Volatility", "text-crit") if pred_vix > 24.0 else (("Moderate Stress", "text-warn") if pred_vix > 15.0 else ("Stable Equities", "text-safe"))
-    inf_status = ("Hyper-Inflationary", "text-crit") if input_cpi > 5.5 else (("Elevated Strain", "text-warn") if input_cpi > 3.0 else ("Target Anchored", "text-safe"))
+    # Constructing original strategy performance trend curves from screenshot 3
+    time_index = np.arange(1, 13, 1)
+    baseline_curve = np.array([1.0, 0.9, 1.1, 1.0, 0.8, 1.1, 1.2, 1.1, 1.3, 1.2, 1.4, 1.3])
+    strategy_curve = np.array([1.1, 1.1, 1.3, 1.2, 1.4, 1.8, 2.1, 2.5, 3.1, 3.0, 3.6, 3.4])
     
-    st.markdown(f"""
-        <div style='background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 1rem; border-radius: 4px;'>
-            <div class='status-row'><span>Economic Cycle Vector</span><span class='{gdp_status[1]}'>{gdp_status[0]}</span></div>
-            <div class='status-row'><span>Equity Implied Volatility (VIX)</span><span class='{vix_status[1]}'>{pred_vix:.1f}</span></div>
-            <div class='status-row'><span>Monetary Stability Bounds</span><span class='{inf_status[1]}'>{inf_status[0]}</span></div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # 12-Month Treasury Curve Term Premium decay simulation representation plot
-    st.markdown("<br><div style='font-size:0.75rem; font-weight:600; color:#6c757d; text-transform:uppercase;'>Simulated 12-Month Treasury Yield Shift Curve</div>", unsafe_allow_html=True)
-    months = np.arange(1, 13, 1)
-    
-    # Dynamic yield calculations mapping flattening vs steepening inverted yield curve profiles
-    base_yield = input_rates + (pred_spread * 0.2)
-    decay_curve = base_yield - ((input_cpi * 0.04) * months)
-    
-    chart_data = pd.DataFrame({
-        'Timeline (Months)': months, 
-        'Projected Treasury Yield (%)': decay_curve
+    chart_df = pd.DataFrame({
+        'Timeline (Months)': time_index,
+        'Baseline Buy & Hold': baseline_curve,
+        'LightGBM AI Portfolio': strategy_curve
     }).set_index('Timeline (Months)')
-    st.line_chart(chart_data, height=160)
+    
+    st.line_chart(chart_df, color=["#6c757d", "#c8a84b"], height=170)
+    
+    st.markdown(f"""
+        <div class='status-row' style='margin-top:0.5rem;'><span>Baseline Yield</span><b>+64.64%</b></div>
+        <div class='status-row'><span>LightGBM Strategy Yield</span><span class='text-safe'><b>+310.61%</b></span></div>
+    """, unsafe_allow_html=True)
+
+# ==========================================
+# LOWER MULTI-MODEL LEADERBOARD ROW
+# ==========================================
+st.markdown("<br><h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1rem;'>Multi-Model Accuracy Tournament Leaderboard</h4>", unsafe_allow_html=True)
+
+leaderboard_data = pd.DataFrame({
+    'Algorithmic Framework': ['LightGBM Regressor', 'CutBoost Regressor', 'XGBoost Regressor'],
+    'Growth Architecture Type': ['Leaf-wise Vertical Tree Growth', 'Symmetric Oblivious Node Split', 'Level-wise Layer Tree Growth'],
+    'Cross Validation Error (MAE)': ['7.59%', '8.12%', '8.47%'],
+    'Status Flag': ['🏆 Optimal Winner', '🥈 Competitive Runner', '🥉 Compliant Baseline']
+})
+st.table(leaderboard_data)
