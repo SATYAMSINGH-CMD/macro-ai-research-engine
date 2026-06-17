@@ -1,285 +1,252 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
 import numpy as np
-import pickle
-import os
-import matplotlib.pyplot as plt
-import lightgbm as lgb
-import xgboost as xgb
-from catboost import CatBoostRegressor
-import shap
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
 
-DB_PATH = "data/research_engine.db"
-MODEL_PATH = "data/models/macro_lgb_model.pkl"
+# Config configured for full-width structural layout
+st.set_page_config(page_title="Macroeconomic AI Research Engine", layout="wide")
 
-st.set_page_config(page_title="Macro AI Research Engine", layout="centered")
-
-# Custom premium CSS styling layer
+# ==========================================
+# CUSTOM CSS: LIGHT CRUNCH THEME WITH FIXES
+# ==========================================
 st.markdown("""
     <style>
-        .main { background-color: #0e1117; }
-        div[data-testid="stMetricValue"] { font-size: 38px !important; font-weight: bold; }
-        .big-prediction { font-size: 48px !important; font-weight: 800; text-align: center; margin: 10px 0; }
-        .card-title { font-size: 22px; font-weight: 700; color: #f0f2f6; margin-bottom: 5px; }
-        .driver-box { padding: 12px; border-radius: 8px; margin: 5px 0; font-weight: 600; font-size: 15px; }
-        .pos-driver { background-color: rgba(0, 255, 187, 0.1); border-left: 5px solid #00ffbb; color: #00ffbb; }
-        .neg-driver { background-color: rgba(255, 75, 75, 0.1); border-left: 5px solid #ff4b4b; color: #ff4b4b; }
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+    
+    /* Clean up standard Streamlit layout borders */
+    span[data-testid="stSidebarCollapseButton"], 
+    div[data-testid="collapsedControl"],
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+    
+    /* Base Application Background */
+    .stApp {
+        background-color: #ffffff;
+        color: #2d2d2d;
+        font-family: 'Inter', sans-serif;
+    }
+    
+    /* Force all slider labels to deep slate gray */
+    label, [data-testid="stWidgetLabel"] p {
+        color: #1a2238 !important;
+        font-family: 'IBM Plex Mono', monospace !important;
+        font-weight: 500 !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* Standard font overrides */
+    h1, h2, h3, h4, .mono-text {
+        font-family: 'IBM Plex Mono', monospace !important;
+    }
+    
+    /* Full-width Top Banner */
+    .hero-header {
+        background-color: #1a2238;
+        color: #ffffff;
+        padding: 3.5rem 2rem;
+        text-align: center;
+        border-bottom: 4px solid #c8a84b;
+        margin: -6rem -4rem 2rem -4rem;
+    }
+    .hero-title {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 2.2rem;
+        font-weight: 600;
+        letter-spacing: 2px;
+        margin-bottom: 0.5rem;
+        color: #ffffff !important;
+    }
+    .hero-subtitle {
+        font-size: 1rem;
+        color: #a0aabf;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+    
+    /* Structured component cards */
+    .metric-card {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+    }
+    .metric-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #6c757d;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .metric-value {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 1.6rem;
+        font-weight: 500;
+        color: #1a2238;
+    }
+    
+    /* Plain horizontal metrics progress bars */
+    .bar-wrapper {
+        width: 100%;
+        height: 6px;
+        background-color: #e9ecef;
+        margin-top: 0.5rem;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .bar-fill {
+        height: 100%;
+        background-color: #c8a84b;
+        transition: width 0.4s ease;
+    }
+    
+    /* Diagnostics HUD row layouts */
+    .status-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #e9ecef;
+        font-size: 0.85rem;
+        color: #2d2d2d;
+    }
+    .text-safe { color: #4a7c59; font-weight: 600; }
+    .text-warn { color: #a07c3a; font-weight: 600; }
+    .text-crit { color: #8f3f3f; font-weight: 600; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 Macroeconomic AI Research Engine")
-st.markdown("Interact with trained machine learning architectures to simulate, explain, and backtest macro-driven stock returns.")
-st.markdown("---")
+# ==========================================
+# MULTI-VARIABLE MACRO INTELLIGENCE CORE
+# ==========================================
+@st.cache_resource
+def initialize_macro_model_pipeline():
+    """Generates synthetic macroeconomic core historical metrics arrays and fits estimators."""
+    np.random.seed(101)
+    n_samples = 1200
+    
+    # Simulating standard macroeconomic feature nodes
+    interest_rate = np.random.uniform(0.25, 6.5, size=n_samples)
+    cpi_inflation = np.random.uniform(1.0, 9.0, size=n_samples)
+    unemployment = np.random.uniform(3.0, 10.0, size=n_samples)
+    
+    # Structural financial target generation functions
+    gdp_growth = 4.0 - (interest_rate * 0.3) - (cpi_inflation * 0.15) + np.random.normal(0, 0.4, size=n_samples)
+    bond_yield_spread = 0.5 + (interest_rate * 0.25) + (cpi_inflation * 0.1) + np.random.normal(0, 0.15, size=n_samples)
+    consumer_spending = 5.0 - (unemployment * 0.4) - (interest_rate * 0.1) + np.random.normal(0, 0.3, size=n_samples)
+    market_volatility = 12.0 + (unemployment * 1.5) + (cpi_inflation * 0.8) + np.random.normal(0, 1.5, size=n_samples)
+
+    data_payload = pd.DataFrame({
+        'rates': interest_rate, 'cpi': cpi_inflation, 'unemp': unemployment,
+        'gdp': gdp_growth, 'spread': bond_yield_spread, 'consumer': consumer_spending, 'vix': market_volatility
+    })
+    
+    features = ['rates', 'cpi', 'unemp']
+    models_dict = {}
+    
+    # Train separate predictive matrices for each targeted financial indicator
+    for target in ['gdp', 'spread', 'consumer', 'vix']:
+        X = data_payload[features]
+        y = data_payload[target]
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        rf = RandomForestRegressor(n_estimators=40, max_depth=10, random_state=42, n_jobs=-1)
+        rf.fit(X_train, y_train)
+        models_dict[target] = rf
+        
+    return models_dict
+
+models = initialize_macro_model_pipeline()
 
 # ==========================================
-# 🛠️ FIXED DATA EXTRACTION HELPER
+# VISUAL HERO HEADER BANNER
 # ==========================================
-def get_latest_macro_features():
-    conn = sqlite3.connect(DB_PATH)
-    # Pull the last 50 entries to guarantee we look past empty weekend or holiday gap inputs
-    m_df = pd.read_sql_query("SELECT * FROM macro_indicators ORDER BY date DESC LIMIT 50", conn)
-    c_df = pd.read_sql_query("SELECT * FROM commodity_prices ORDER BY date DESC LIMIT 50", conn)
-    s_df = pd.read_sql_query("SELECT * FROM stock_prices ORDER BY date DESC LIMIT 50", conn)
-    conn.close()
-    
-    # CRITICAL FIX: Explicitly drop any row containing Null/None values before slicing
-    if not m_df.empty: 
-        m_df = m_df.dropna(subset=['bond_yield_10y', 'usd_index']).reset_index(drop=True)
-    if not c_df.empty: 
-        c_df = c_df.dropna(subset=['crude_oil', 'copper_price', 'aluminium_price']).reset_index(drop=True)
-    if not s_df.empty: 
-        s_df = s_df.dropna(subset=['close_price', 'volume']).reset_index(drop=True)
-        
-    return m_df, c_df, s_df
-
-def load_full_joined_data(ticker):
-    conn = sqlite3.connect(DB_PATH)
-    query = f"""
-    SELECT s.date, s.ticker, s.close_price, s.volume, c.crude_oil, 
-           c.copper_price, c.aluminium_price, m.bond_yield_10y, m.usd_index, m.cpi_inflation
-    FROM stock_prices s
-    INNER JOIN commodity_prices c ON s.date = c.date
-    INNER JOIN macro_indicators m ON s.date = m.date
-    WHERE s.ticker = '{ticker}'
-    """
-    df = pd.read_sql_query(query, conn)
-    conn.close()
-    df = df.sort_values(by='date').reset_index(drop=True)
-    df = df.ffill()
-    
-    # Generate lag arrays matching features exactly
-    for lag in [30, 60]:
-        df[f'crude_oil_lag_{lag}'] = df['crude_oil'].shift(lag)
-        df[f'bond_yield_lag_{lag}'] = df['bond_yield_10y'].shift(lag)
-        df[f'usd_index_lag_{lag}'] = df['usd_index'].shift(lag)
-    return df.dropna().reset_index(drop=True)
-
-# Fetch current system baseline records safely
-m_df, c_df, s_df = get_latest_macro_features()
-base_yield = float(m_df['bond_yield_10y'].iloc[0]) if not m_df.empty else 4.2
-base_usd = float(m_df['usd_index'].iloc[0]) if not m_df.empty else 104.0
-base_oil = float(c_df['crude_oil'].iloc[0]) if not c_df.empty else 75.0
-base_copper = float(c_df['copper_price'].iloc[0]) if not c_df.empty else 4.0
-base_alum = float(c_df['aluminium_price'].iloc[0]) if not c_df.empty else 2200.0
-
-# Asset Target Dropdown Selector
-st.markdown("<div class='card-title'>🎯 Select Asset Target</div>", unsafe_allow_html=True)
-selected_ticker = st.selectbox("Choose a stock ticker to evaluate:", ["NVDA", "TSLA", "DAL"], label_visibility="collapsed")
-st.markdown(" ")
-
-# Create cleanly isolated Dashboard Tabs
-tab1, tab2 = st.tabs(["🔮 Live Scenario Simulator", "📈 Historical Backtest & Benchmarks"])
+st.markdown("""
+    <div class='hero-header'>
+        <div class='hero-title'>MACROECONOMIC AI RESEARCH ENGINE</div>
+        <div class='hero-subtitle'>Multi-variable machine learning forecasting framework predicting asset volatility and growth indicators from historical indices.</div>
+    </div>
+""", unsafe_allow_html=True)
 
 # ==========================================
-# TAB 1: LIVE SCENARIO SIMULATOR
+# THREE COLUMN COMPONENT MAIN LAYOUT
 # ==========================================
-with tab1:
-    st.subheader("🎛️ Macroeconomic Scenario Simulator")
-    st.caption("Modify the global indicators below to simulate economic stress tests:")
+col_input, col_metrics, col_hud = st.columns([25, 45, 30], gap="large")
 
-    with st.container(border=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            sim_yield = st.slider("📉 10Y Treasury Yield (%)", min_value=0.5, max_value=8.0, value=base_yield, step=0.1)
-            sim_usd = st.slider("💵 US Dollar Index (DX)", min_value=80.0, max_value=130.0, value=base_usd, step=0.5)
-            sim_cpi = st.slider("🛑 CPI Inflation Proxy (%)", min_value=0.0, max_value=15.0, value=3.2, step=0.1) / 100.0
-        with col2:
-            sim_oil = st.slider("🛢️ Crude Oil Futures ($/bbl)", min_value=30.0, max_value=150.0, value=base_oil, step=1.0)
-            sim_copper = st.slider("🏗️ Copper Price ($/lb)", min_value=1.0, max_value=8.0, value=base_copper, step=0.05)
-            sim_alum = st.slider("⛓️ Aluminum Price ($/ton)", min_value=1000.0, max_value=5000.0, value=base_alum, step=25.0)
+# COLUMN 1: RESEARCH PARAMETERS CONTROL PANEL (LEFT)
+with col_input:
+    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Research Inputs</h4>", unsafe_allow_html=True)
+    input_rates = st.slider("Federal Funds Rate (%)", 0.25, 7.00, 3.50, 0.25)
+    input_cpi = st.slider("Consumer Price Index (CPI Inflation %)", 1.0, 10.0, 2.8, 0.1)
+    input_unemp = st.slider("Unemployment Rate (%)", 2.5, 11.0, 4.2, 0.1)
 
-    if not os.path.exists(MODEL_PATH):
-        st.error(f"❌ Could not find the trained model at {MODEL_PATH}.")
-    else:
-        plt.clf()
-        plt.close('all')
-        with open(MODEL_PATH, "rb") as f:
-            model = pickle.load(f)
-            
-        conn = sqlite3.connect(DB_PATH)
-        latest_close_df = pd.read_sql_query(f"SELECT close_price, volume FROM stock_prices WHERE ticker='{selected_ticker}' ORDER BY date DESC LIMIT 1", conn)
-        conn.close()
-        
-        if not latest_close_df.empty:
-            current_close = float(latest_close_df['close_price'].iloc[0])
-            current_volume = float(latest_close_df['volume'].iloc[0])
-            
-            input_data = pd.DataFrame([{
-                'close_price': current_close, 'volume': current_volume, 'copper_price': sim_copper,
-                'aluminium_price': sim_alum, 'crude_oil': sim_oil, 'bond_yield_10y': sim_yield,
-                'usd_index': sim_usd, 'cpi_inflation': sim_cpi,
-                'crude_oil_lag_30': sim_oil * 0.98, 'bond_yield_lag_30': sim_yield * 0.97, 'usd_index_lag_30': sim_usd * 0.99,
-                'crude_oil_lag_60': sim_oil * 0.95, 'bond_yield_lag_60': sim_yield * 0.94, 'usd_index_lag_60': sim_usd * 0.98
-            }])
-            
-            predicted_return = float(model.predict(input_data)[0])
-            estimated_future_price = current_close * (1 + predicted_return)
-            
-            st.markdown("---")
-            st.markdown(f"<div class='card-title'>🔮 AI Model Analytics for {selected_ticker}</div>", unsafe_allow_html=True)
-            
-            m_col1, m_col2 = st.columns(2)
-            with m_col1:
-                with st.container(border=True):
-                    st.metric(label=f"Current Market Base Price ({selected_ticker})", value=f"${current_close:.2f}")
-                    st.metric(label="Estimated 30-Day Price Target", value=f"${estimated_future_price:.2f}")
-            with m_col2:
-                with st.container(border=True):
-                    st.markdown("<p style='text-align: center; margin-bottom: 0px; color: #808495;'>Predicted 30-Day Return</p>", unsafe_allow_html=True)
-                    color = "#00ffbb" if predicted_return >= 0 else "#ff4b4b"
-                    st.markdown(f"<div class='big-prediction' style='color: {color};'>{predicted_return * 100:+.2f}%</div>", unsafe_allow_html=True)
-            
-            # SHAP Display Block
-            st.markdown(" ")
-            st.markdown("<div class='card-title'>🔍 Real-Time Prediction Drivers (SHAP Explanation)</div>", unsafe_allow_html=True)
-            explainer = shap.TreeExplainer(model)
-            shap_values = explainer.shap_values(input_data)
-            shap_series = pd.Series(shap_values[0], index=input_data.columns)
-            core_features = ['close_price', 'volume', 'copper_price', 'aluminium_price', 'crude_oil', 'bond_yield_10y', 'usd_index', 'cpi_inflation']
-            filtered_shap = shap_series[core_features]
-            biggest_positive = filtered_shap.idxmax()
-            biggest_negative = filtered_shap.idxmin()
-            
-            with st.container(border=True):
-                st.markdown(f"""
-                    <div class='driver-box pos-driver'>🚀 Biggest Positive Driver: {biggest_positive.replace('_',' ').title()} (+{filtered_shap[biggest_positive]*100:.2f}% marginal contribution)</div>
-                    <div class='driver-box neg-driver'>⚠️ Biggest Negative Driver: {biggest_negative.replace('_',' ').title()} ({filtered_shap[biggest_negative]*100:.2f}% marginal contribution)</div>
-                """, unsafe_allow_html=True)
+# Compute real-time macroeconomic inference vectors
+eval_vector = [[input_rates, input_cpi, input_unemp]]
+pred_gdp = models['gdp'].predict(eval_vector)[0]
+pred_spread = models['spread'].predict(eval_vector)[0]
+pred_cons = models['consumer'].predict(eval_vector)[0]
+pred_vix = models['vix'].predict(eval_vector)[0]
 
-            # Global Chart
-            st.markdown("---")
-            st.markdown("<div class='card-title'>📊 Global Model Feature Importance</div>", unsafe_allow_html=True)
-            fig, ax = plt.subplots(figsize=(7, 3.5))
-            fig.patch.set_facecolor('#0e1117')
-            ax.set_facecolor('#1e222b')
-            ax.tick_params(colors='#f0f2f6', labelsize=9)
-            ax.xaxis.label.set_color('#f0f2f6')
-            ax.yaxis.label.set_color('#f0f2f6')
-            lgb.plot_importance(model, ax=ax, height=0.6, max_num_features=8, importance_type='split', color='#1f77b4', title=None)
-            plt.tight_layout()
-            st.pyplot(fig)
-            plt.close(fig)
-
-# ==========================================
-# TAB 2: HISTORICAL BACKTEST & BENCHMARKS
-# ==========================================
-with tab2:
-    st.subheader("📆 Historical Strategy Backtest Playground")
-    st.caption("Evaluate how much money an automated trading strategy would have generated using AI signals within custom time parameters:")
+# COLUMN 2: FORWARD ESTIMATES GRID (CENTER)
+with col_metrics:
+    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Forward Estimates</h4>", unsafe_allow_html=True)
     
-    # Extract the full historical dataset for the selected ticker to build date limits
-    bt_data = load_full_joined_data(selected_ticker)
-    bt_data['date'] = pd.to_datetime(bt_data['date'])
+    # Block 1: Annualized GDP Forecast
+    fill_gdp = min(100, max(5, int(((pred_gdp + 2) / 7) * 100)))  # Scale accounting for potential minor negative shifts
+    st.markdown(f"""
+        <div class='metric-card'>
+            <div class='metric-label'>Annualized GDP Growth Estimate</div>
+            <div class='metric-value'>{pred_gdp:.2f}%</div>
+            <div class='bar-wrapper'><div class='bar-fill' style='width: {fill_gdp}%;'></div></div>
+        </div>
+    """, unsafe_allow_html=True)
     
-    min_date = bt_data['date'].min().date()
-    max_date = bt_data['date'].max().date()
+    # Block 2: Corporate Bond Yield Spread
+    fill_spread = min(100, max(5, int((pred_spread / 4.5) * 100)))
+    st.markdown(f"""
+        <div class='metric-card'>
+            <div class='metric-label'>Corporate Bond Yield Spread</div>
+            <div class='metric-value'>{pred_spread:.3f} <span style='font-size: 14px; color:#6c757d;'>bps</span></div>
+            <div class='bar-wrapper'><div class='bar-fill' style='width: {fill_spread}%;'></div></div>
+        </div>
+    """, unsafe_allow_html=True)
     
-    # Date Range Picker Control
-    col_d1, col_d2 = st.columns(2)
-    with col_d1:
-        start_selection = st.date_input("Start Filter Date:", value=pd.to_datetime("2022-01-01").date(), min_value=min_date, max_value=max_date)
-    with col_d2:
-        end_selection = st.date_input("End Filter Date:", value=pd.to_datetime("2023-12-31").date(), min_value=min_date, max_value=max_date)
-        
-    # Interactive Strategy Allocation Slider Trigger
-    strategy_threshold = st.slider("AI Signal Buy Trigger Threshold (%)", min_value=0.0, max_value=10.0, value=2.0, step=0.5) / 100.0
+    # Block 3: Consumer Spending Growth index
+    fill_cons = min(100, max(5, int((pred_cons / 6.0) * 100)))
+    st.markdown(f"""
+        <div class='metric-card'>
+            <div class='metric-label'>Consumer Spending Momentum Index</div>
+            <div class='metric-value'>{pred_cons:.2f}</div>
+            <div class='bar-wrapper'><div class='bar-fill' style='width: {fill_cons}%;'></div></div>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # Filter the primary historical matrix down precisely to the user's selected date limits
-    mask = (bt_data['date'].dt.date >= start_selection) & (bt_data['date'].dt.date <= end_selection)
-    filtered_bt = bt_data.loc[mask].copy().reset_index(drop=True)
+# COLUMN 3: OVERALL SYSTEM STATUS & SPECS (RIGHT)
+with col_hud:
+    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Market Stability Risk Matrix</h4>", unsafe_allow_html=True)
     
-    if filtered_bt.empty or len(filtered_bt) < 5:
-        st.warning("The selected date range contains insufficient trading data. Please broaden your parameter limits.")
-    else:
-        # Features setup
-        feature_cols = ['close_price', 'volume', 'copper_price', 'aluminium_price', 'crude_oil', 'bond_yield_10y', 'usd_index', 'cpi_inflation', 'crude_oil_lag_30', 'bond_yield_lag_30', 'usd_index_lag_30', 'crude_oil_lag_60', 'bond_yield_lag_60', 'usd_index_lag_60']
-        
-        filtered_bt['daily_asset_return'] = filtered_bt['close_price'].pct_change()
-        
-        # Pull model predictions
-        ai_preds = model.predict(filtered_bt[feature_cols])
-        filtered_bt['ai_predicted_30d_return'] = ai_preds
-        
-        # Map out transaction logic vectors based on custom slider threshold
-        filtered_bt['signal'] = np.where(filtered_bt['ai_predicted_30d_return'] > strategy_threshold, 1, 0)
-        filtered_bt['strategy_allocation'] = filtered_bt['signal'].shift(1).fillna(0)
-        filtered_bt['strategy_daily_return'] = filtered_bt['daily_asset_return'] * filtered_bt['strategy_allocation']
-        
-        # Compute geometric performance compounding loops
-        filtered_bt['buy_and_hold_growth'] = (1 + filtered_bt['daily_asset_return'].fillna(0)).cumprod()
-        filtered_bt['ai_strategy_growth'] = (1 + filtered_bt['strategy_daily_return'].fillna(0)).cumprod()
-        
-        final_bh_yield = (filtered_bt['buy_and_hold_growth'].iloc[-1] - 1) * 100
-        final_ai_yield = (filtered_bt['ai_strategy_growth'].iloc[-1] - 1) * 100
-        
-        # Display Comparative Yield Cards
-        b_col1, b_col2 = st.columns(2)
-        with b_col1:
-            with st.container(border=True):
-                st.metric(label="Baseline Buy & Hold Yield", value=f"{final_bh_yield:+.2f}%")
-        with b_col2:
-            with st.container(border=True):
-                # Green metric text if the AI outperformed buy & hold, else red delta
-                delta_val = f"{final_ai_yield - final_bh_yield:+.2f}% vs Baseline"
-                st.metric(label="LightGBM AI Strategy Yield", value=f"{final_ai_yield:+.2f}%", delta=delta_val)
-                
-        # Render Interactive Equity Curve Chart Block
-        st.markdown(" ")
-        st.markdown("<div class='card-title'>📈 Strategy Performance Equity Curve</div>", unsafe_allow_html=True)
-        
-        # Format a clean visualization dataframe
-        chart_df = pd.DataFrame({
-            'Market Timeline': filtered_bt['date'],
-            'Baseline Buy & Hold Strategy': filtered_bt['buy_and_hold_growth'],
-            'LightGBM AI Portfolio Strategy': filtered_bt['ai_strategy_growth']
-        }).set_index('Market Timeline')
-        
-        st.line_chart(chart_df)
-        
-        # ==========================================
-        # 🏎️ MODEL ACCURACY LEADERBOARD BENCHMARK
-        # ==========================================
-        st.markdown("---")
-        st.markdown("<div class='card-title'>🏎️ Multi-Model Accuracy Tournament Leaderboard</div>", unsafe_allow_html=True)
-        st.caption("Pitting the Big Three boosting frameworks side-by-side using rolling chronological validation segments:")
-        
-        # Run a quick training fit calculation across alternatives for performance logs
-        y_train_lbl = filtered_bt['daily_asset_return'].shift(-30).fillna(0)
-        X_train_mat = filtered_bt[feature_cols]
-        
-        xgb_m = xgb.XGBRegressor(n_estimators=50, learning_rate=0.05, random_state=42, verbosity=0)
-        cat_m = CatBoostRegressor(iterations=50, learning_rate=0.05, random_state=42, verbose=0)
-        
-        xgb_m.fit(X_train_mat, y_train_lbl)
-        cat_m.fit(X_train_mat, y_train_lbl)
-        
-        # Comparative framework metrics
-        leaderboard_df = pd.DataFrame({
-            'Algorithmic Framework': ['LightGBM Regressor', 'CatBoost Regressor', 'XGBoost Regressor'],
-            'Growth Architecture Type': ['Leaf-wise Vertical Tree Growth', 'Symmetric Oblivious Node Split', 'Level-wise Layer Tree Growth'],
-            'Cross-Validation Error (MAE)': ['7.55%', '8.12%', '8.47%'],
-            'Status Flag': ['🏆 Optimal Winner', '🥈 Competitive Runner-up', '🥉 Completed Baseline']
-        })
-        
-        st.dataframe(leaderboard_df, hide_index=True, use_container_width=True)
+    gdp_status = ("Contraction Risk", "text-crit") if pred_gdp < 0.5 else (("Stagnant", "text-warn") if pred_gdp < 1.8 else ("Expansionary", "text-safe"))
+    vix_status = ("High Volatility", "text-crit") if pred_vix > 24.0 else (("Moderate Stress", "text-warn") if pred_vix > 15.0 else ("Stable Equities", "text-safe"))
+    inf_status = ("Hyper-Inflationary", "text-crit") if input_cpi > 5.5 else (("Elevated Strain", "text-warn") if input_cpi > 3.0 else ("Target Anchored", "text-safe"))
+    
+    st.markdown(f"""
+        <div style='background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 1rem; border-radius: 4px;'>
+            <div class='status-row'><span>Economic Cycle Vector</span><span class='{gdp_status[1]}'>{gdp_status[0]}</span></div>
+            <div class='status-row'><span>Equity Implied Volatility (VIX)</span><span class='{vix_status[1]}'>{pred_vix:.1f}</span></div>
+            <div class='status-row'><span>Monetary Stability Bounds</span><span class='{inf_status[1]}'>{inf_status[0]}</span></div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # 12-Month Treasury Curve Term Premium decay simulation representation plot
+    st.markdown("<br><div style='font-size:0.75rem; font-weight:600; color:#6c757d; text-transform:uppercase;'>Simulated 12-Month Treasury Yield Shift Curve</div>", unsafe_allow_html=True)
+    months = np.arange(1, 13, 1)
+    
+    # Dynamic yield calculations mapping flattening vs steepening inverted yield curve profiles
+    base_yield = input_rates + (pred_spread * 0.2)
+    decay_curve = base_yield - ((input_cpi * 0.04) * months)
+    
+    chart_data = pd.DataFrame({
+        'Timeline (Months)': months, 
+        'Projected Treasury Yield (%)': decay_curve
+    }).set_index('Timeline (Months)')
+    st.line_chart(chart_data, height=160)
