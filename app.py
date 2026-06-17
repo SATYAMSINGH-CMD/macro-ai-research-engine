@@ -199,24 +199,25 @@ with col_center:
 with col_right:
     st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Strategy Performance Curve</h4>", unsafe_allow_html=True)
     
-    # Generate realistic dynamic backtest equity curves bound to live slider parameters
+    # Completely decoupled simulation modeling
     np.random.seed(profile["seed"])
-    time_index = np.arange(1, 13, 1)
+    months = np.arange(1, 13, 1)
     
-    # 1. Baseline Buy & Hold naturally fluctuates over 12 months
-    base_market_drift = np.random.normal(0.01, 0.04, size=12)
-    base_growth = np.cumprod(1 + base_market_drift) * 100 - 100
+    # 1. Baseline Buy & Hold calculations run strictly independent
+    baseline_noise = np.random.normal(0.015, 0.05, size=12)
+    base_growth = np.cumprod(1 + baseline_noise) * 100 - 100
     final_base_yield = base_growth[-1]
     
-    # 2. AI Strategy loop penalizes or rewards active positions based on slider parameters
-    macro_risk_penalty = (sim_cpi - 2.5) * 0.01 + (sim_yield - 3.5) * 0.005
-    ai_market_drift = base_market_drift + (pred_30d_return * 0.005) - macro_risk_penalty
+    # 2. AI Strategy calculation loop factoring conditional input bounds
+    macro_drag = max(-0.08, min(0.08, (3.0 - sim_cpi) * 0.015 + (4.0 - sim_yield) * 0.01))
+    ai_signal = (pred_30d_return / 100.0) + macro_drag
     
-    ai_growth = np.cumprod(1 + ai_market_drift) * 100 - 100
+    ai_execution_noise = np.random.normal(ai_signal, 0.04, size=12)
+    ai_growth = np.cumprod(1 + ai_execution_noise) * 100 - 100
     final_ai_yield = ai_growth[-1]
     
     chart_df = pd.DataFrame({
-        'Timeline (Months)': time_index,
+        'Timeline (Months)': months,
         'Baseline Buy & Hold (%)': base_growth,
         'LightGBM AI Portfolio (%)': ai_growth
     }).set_index('Timeline (Months)')
