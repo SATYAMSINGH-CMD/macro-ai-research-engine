@@ -8,7 +8,7 @@ import shap
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-from features import build_inference_row, DB_PATH, ASSET_TICKERS
+from features import build_inference_row, ASSET_TICKERS
 
 # Page configuration optimized for a clean, professional dashboard view
 st.set_page_config(page_title="Macro Factor Impact Explorer", layout="wide")
@@ -114,13 +114,22 @@ st.markdown("""
 # ==========================================
 # LOAD PRODUCTION MODEL AND ARTIFACTS
 # ==========================================
+from pathlib import Path
+
+# Paths resolved relative to this app.py file location
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_PATH = BASE_DIR / "data" / "models" / "macro_lgb_model.pkl"
+CONFIG_PATH = BASE_DIR / "data" / "models" / "feature_cols.json"
+METRICS_PATH = BASE_DIR / "data" / "models" / "metrics.json"
+APP_DB_PATH = BASE_DIR / "data" / "research_engine.db"
+
 @st.cache_resource
 def load_model_artifacts():
     try:
-        model = joblib.load("data/models/macro_lgb_model.pkl")
-        with open("data/models/feature_cols.json", "r") as f:
+        model = joblib.load(MODEL_PATH)
+        with open(CONFIG_PATH, "r") as f:
             feature_config = json.load(f)
-        with open("data/models/metrics.json", "r") as f:
+        with open(METRICS_PATH, "r") as f:
             metrics = json.load(f)
         return model, feature_config, metrics
     except Exception as e:
@@ -142,7 +151,7 @@ st.markdown("---")
 @st.cache_data
 def get_initial_row(ticker):
     try:
-        row, meta = build_inference_row(DB_PATH, ticker, feature_cols)
+        row, meta = build_inference_row(APP_DB_PATH, ticker, feature_cols)
         return meta
     except Exception as e:
         st.error(f"Error loading data from database: {e}")
@@ -184,7 +193,7 @@ macro_overrides = {
     'copper_price': sim_copper,
     'aluminium_price': sim_aluminum
 }
-live_input_df, _ = build_inference_row(DB_PATH, selected_ticker, feature_cols, macro_overrides=macro_overrides)
+live_input_df, _ = build_inference_row(APP_DB_PATH, selected_ticker, feature_cols, macro_overrides=macro_overrides)
 
 # Compute live model inference prediction
 pred_30d_return = model.predict(live_input_df)[0]
@@ -310,7 +319,7 @@ with col_scenario:
     # Load historical stock prices
     @st.cache_data
     def load_historical_prices(ticker):
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(APP_DB_PATH)
         query = """
         SELECT date, close_price 
         FROM stock_prices 
