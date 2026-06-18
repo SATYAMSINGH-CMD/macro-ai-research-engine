@@ -1,14 +1,20 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
+import sqlite3
+import json
+import joblib
+import shap
+import matplotlib.pyplot as plt
+from datetime import datetime
+
+from features import build_inference_row, DB_PATH, ASSET_TICKERS
 
 # Page configuration optimized for a clean, professional dashboard view
 st.set_page_config(page_title="Macro Factor Impact Explorer", layout="wide")
 
 # ==========================================
-# STYLING SHEET: CLEAN LIGHT THEME
+# STYLING SHEET: CLEAN INDUSTRIAL LIGHT THEME
 # ==========================================
 st.markdown("""
     <style>
@@ -42,7 +48,7 @@ st.markdown("""
     .hero-header {
         background-color: #1a2238;
         color: #ffffff;
-        padding: 3.5rem 2rem;
+        padding: 3rem 2rem;
         text-align: center;
         border-bottom: 4px solid #c8a84b;
         margin: -6rem -4rem 2rem -4rem;
@@ -105,58 +111,52 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+# ==========================================
+# LOAD PRODUCTION MODEL AND ARTIFACTS
+# ==========================================
+@st.cache_resource
+def load_model_artifacts():
+    try:
+        model = joblib.load("data/models/macro_lgb_model.pkl")
+        with open("data/models/feature_cols.json", "r") as f:
+            feature_config = json.load(f)
+        with open("data/models/metrics.json", "r") as f:
+            metrics = json.load(f)
+        return model, feature_config, metrics
+    except Exception as e:
+        st.error(f"Failed to load model artifacts: {e}. Make sure you run `trainmodel.py` first.")
+        st.stop()
+
+model, feature_config, metrics = load_model_artifacts()
+feature_cols = feature_config["feature_cols"]
+tickers = feature_config["tickers"]
+
 # Asset target selector configuration
-selected_ticker = st.selectbox("Asset Target", ["NVDA", "TSLA", "AAPL", "MSFT"])
+selected_ticker = st.selectbox("Asset Target", tickers, index=tickers.index("NVDA") if "NVDA" in tickers else 0)
 st.markdown("---")
 
 # ==========================================
-# DATA SIMULATION & MODEL PROCESSING
+# FETCH BASELINE DATA AND INITIALIZE SCENARIO
 # ==========================================
-@st.cache_resource
-def process_macro_model(ticker):
-    """Generates sector-specific synthetic matrices and extracts model validation parameters."""
-    np.random.seed(hash(ticker) % 10000)
-    n_samples = 1500
-    
-    yield_10y = np.random.uniform(1.5, 6.0, size=n_samples)
-    crude_oil = np.random.uniform(40.0, 120.0, size=n_samples)
-    usd_idx = np.random.uniform(85.0, 115.0, size=n_samples)
-    copper = np.random.uniform(2.5, 5.5, size=n_samples)
-    cpi = np.random.uniform(1.0, 10.0, size=n_samples)
-    aluminum = np.random.uniform(1000.0, 5000.0, size=n_samples)
-    
-    if ticker == "NVDA":
-        target_return = 4.0 - (yield_10y * 0.4) - (cpi * 0.2) + (usd_idx * 0.05) - (crude_oil * 0.01) + (copper * 0.1) + (aluminum * 0.0001)
-    elif ticker == "TSLA":
-        target_return = 5.0 - (crude_oil * 0.06) - (yield_10y * 0.5) - (aluminum * 0.0005) - (cpi * 0.3) + (copper * 0.15) + (usd_idx * 0.02)
-    elif ticker == "AAPL":
-        target_return = 3.5 - (usd_idx * 0.08) - (aluminum * 0.0003) - (copper * 0.4) - (yield_10y * 0.2) - (cpi * 0.1) + (crude_oil * 0.01)
-    else: # MSFT
-        target_return = 3.0 - (yield_10y * 0.3) - (cpi * 0.1) + (usd_idx * 0.03) - (crude_oil * 0.002) + (copper * 0.01) + (aluminum * 0.00001)
+# Retrieve latest actual row from database to populate default slider values
+@st.cache_data
+def get_initial_row(ticker):
+    try:
+        row, meta = build_inference_row(DB_PATH, ticker, feature_cols)
+        return meta
+    except Exception as e:
+        st.error(f"Error loading data from database: {e}")
+        st.stop()
 
-    target_return += np.random.normal(0, 0.8, size=n_samples)
-    
-    df = pd.DataFrame({
-        '10Y Treasury Yield': yield_10y, 'Crude Oil Futures': crude_oil, 'US Dollar Index': usd_idx,
-        'Copper Price': copper, 'CPI Inflation Proxy': cpi, 'Aluminum Price': aluminum,
-        'Target': target_return
-    })
-    
-    features = ['10Y Treasury Yield', 'Crude Oil Futures', 'US Dollar Index', 'Copper Price', 'CPI Inflation Proxy', 'Aluminum Price']
-    X = df[features]
-    y = df['Target']
-    
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    rf = RandomForestRegressor(n_estimators=60, max_depth=12, random_state=42, n_jobs=-1)
-    rf.fit(X_train, y_train)
-    
-    test_r2 = rf.score(X_test, y_test)
-    global_baseline = np.mean(y_train)
-    
-    return rf, global_baseline, test_r2
+meta = get_initial_row(selected_ticker)
+default_macro = meta['default_macro']
+current_price = meta['current_price']
+latest_date = meta['latest_date']
 
-model, model_baseline, model_r2 = process_macro_model(selected_ticker)
+# Helper to safely clip values to slider bounds
+def get_slider_val(key, min_val, max_val, fallback):
+    val = default_macro.get(key, fallback)
+    return float(np.clip(val, min_val, max_val))
 
 # ==========================================
 # MAIN INTERACTIVE CORE LAYOUT GRID
@@ -165,98 +165,223 @@ col_inputs, col_model, col_scenario = st.columns([30, 40, 30], gap="large")
 
 # --- PANEL 1: INPUTS (LEFT) ---
 with col_inputs:
-    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Inputs</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Interactive Stress Scenario</h4>", unsafe_allow_html=True)
+    st.caption(f"Pre-filled with latest market data ({latest_date})")
     
-    sim_yield = st.slider("10Y Treasury Yield (%)", 1.50, 6.00, 4.42, 0.01)
-    sim_oil = st.slider("Crude Oil Futures ($/bbl)", 40.00, 120.00, 80.75, 0.25)
-    sim_usd = st.slider("US Dollar Index (DXY)", 85.00, 115.00, 99.75, 0.25)
-    sim_copper = st.slider("Copper Price ($/lb)", 2.00, 6.00, 4.48, 0.01)
-    sim_cpi = st.slider("CPI Inflation Proxy (%)", 1.00, 10.00, 3.20, 0.10)
-    sim_aluminum = st.slider("Aluminum Price ($/ton)", 1000.0, 5000.0, 2696.0, 10.0)
+    sim_yield = st.slider("10Y Treasury Yield (%)", 0.50, 8.00, get_slider_val('bond_yield_10y', 0.50, 8.00, 4.42), 0.01)
+    sim_usd = st.slider("US Dollar Index (DXY)", 70.00, 130.00, get_slider_val('usd_index', 70.00, 130.00, 100.00), 0.10)
+    sim_cpi = st.slider("CPI Inflation Proxy (%)", -1.00, 10.00, get_slider_val('cpi_inflation', -1.00, 10.00, 3.20), 0.10)
+    sim_oil = st.slider("Crude Oil Futures ($/bbl)", 20.00, 160.00, get_slider_val('crude_oil', 20.00, 160.00, 80.00), 0.50)
+    sim_copper = st.slider("Copper Price ($/lb)", 1.00, 8.00, get_slider_val('copper_price', 1.00, 8.00, 4.00), 0.05)
+    sim_aluminum = st.slider("Aluminum Price ($/ton)", 1000.0, 5000.0, get_slider_val('aluminium_price', 1000.0, 5000.0, 2500.0), 10.0)
 
-# Structural data framing preparation for estimator execution loops
-feature_names = ['10Y Treasury Yield', 'Crude Oil Futures', 'US Dollar Index', 'Copper Price', 'CPI Inflation Proxy', 'Aluminum Price']
-live_input_df = pd.DataFrame([[sim_yield, sim_oil, sim_usd, sim_copper, sim_cpi, sim_aluminum]], columns=feature_names)
+# Build custom scenario input feature row
+macro_overrides = {
+    'bond_yield_10y': sim_yield,
+    'usd_index': sim_usd,
+    'cpi_inflation': sim_cpi,
+    'crude_oil': sim_oil,
+    'copper_price': sim_copper,
+    'aluminium_price': sim_aluminum
+}
+live_input_df, _ = build_inference_row(DB_PATH, selected_ticker, feature_cols, macro_overrides=macro_overrides)
 
 # Compute live model inference prediction
 pred_30d_return = model.predict(live_input_df)[0]
-
-ticker_prices = {"NVDA": 205.19, "TSLA": 178.45, "AAPL": 172.50, "MSFT": 415.20}
-current_price = ticker_prices[selected_ticker]
-target_price = current_price * (1.0 + (pred_30d_return / 100.0))
+target_price = current_price * (1.0 + pred_30d_return)
 
 # --- PANEL 2: MODEL ANALYTICS & RESULTS (CENTER) ---
-# One-factor-at-a-time marginal feature sensitivity analysis
-feature_contributions = {}
-for feature in feature_names:
-    isolated_input = pd.DataFrame([[
-        sim_yield if feature == '10Y Treasury Yield' else 4.42,
-        sim_oil if feature == 'Crude Oil Futures' else 80.75,
-        sim_usd if feature == 'US Dollar Index' else 99.75,
-        sim_copper if feature == 'Copper Price' else 4.48,
-        sim_cpi if feature == 'CPI Inflation Proxy' else 3.20,
-        sim_aluminum if feature == 'Aluminum Price' else 2696.0
-    ]], columns=feature_names)
-    
-    feature_contributions[feature] = model.predict(isolated_input)[0] - model_baseline
+@st.cache_resource
+def get_shap_explainer(_model):
+    return shap.TreeExplainer(_model)
 
-sorted_drivers = sorted(feature_contributions.items(), key=lambda item: item[1], reverse=True)
-biggest_positive_name, biggest_positive_val = sorted_drivers[0]
-biggest_negative_name, biggest_negative_val = sorted_drivers[-1]
+explainer = get_shap_explainer(model)
+shap_values = explainer(live_input_df)
+
+# Handle potential shape variation in SHAP versions
+if hasattr(shap_values, "values"):
+    shap_vals_array = shap_values.values[0]
+else:
+    shap_vals_array = shap_values[0]
+
+# Custom matplotlib SHAP plotting helper
+def plot_shap_contributions(shap_vals, feature_names, max_display=10):
+    df_shap = pd.DataFrame({
+        'feature': feature_names,
+        'val': shap_vals * 100.0  # Scale fractional returns to percentages
+    })
+    
+    name_mapping = {
+        'bond_yield_10y': '10Y Treasury Yield',
+        'usd_index': 'US Dollar Index',
+        'cpi_inflation': 'CPI Inflation Proxy',
+        'crude_oil': 'Crude Oil Price',
+        'copper_price': 'Copper Price',
+        'aluminium_price': 'Aluminum Price',
+        'return_5d': '5-Day Price Return',
+        'return_20d': '20-Day Price Return',
+        'volatility_20d': '20-Day Return Volatility'
+    }
+    for col in ['bond_yield_10y', 'usd_index', 'cpi_inflation', 'crude_oil', 'copper_price', 'aluminium_price']:
+        name_mapping[f'{col}_lag_30'] = f'{name_mapping[col]} (30d Lag)'
+        name_mapping[f'{col}_lag_60'] = f'{name_mapping[col]} (60d Lag)'
+        
+    df_shap['display_name'] = df_shap['feature'].apply(lambda x: name_mapping.get(x, x.replace('asset_', 'Asset: ')))
+    
+    # Filter out exact zeros and sort
+    df_shap = df_shap[df_shap['val'].abs() > 0.001].copy()
+    df_shap['abs_val'] = df_shap['val'].abs()
+    df_shap = df_shap.sort_values('abs_val', ascending=True).tail(max_display)
+    
+    if df_shap.empty:
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.text(0.5, 0.5, "No significant factor drivers found", ha='center', va='center')
+        ax.axis('off')
+        return fig
+
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    fig.patch.set_facecolor('#ffffff')
+    ax.set_facecolor('#f8f9fa')
+    
+    colors = ['#c8a84b' if x >= 0 else '#8f3f3f' for x in df_shap['val']]
+    bars = ax.barh(df_shap['display_name'], df_shap['val'], color=colors, height=0.6, edgecolor='none')
+    
+    # Label value on bars
+    for bar in bars:
+        width = bar.get_width()
+        label_x = width + 0.1 if width >= 0 else width - 0.1
+        ha = 'left' if width >= 0 else 'right'
+        ax.text(
+            label_x, bar.get_y() + bar.get_height()/2, 
+            f"{width:+.2f}%", 
+            va='center', ha=ha, 
+            color='#1a2238', 
+            fontweight='bold',
+            fontsize=8.5
+        )
+        
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_color('#e9ecef')
+    
+    ax.xaxis.grid(True, linestyle='--', alpha=0.5, color='#e9ecef')
+    ax.set_axisbelow(True)
+    
+    plt.title("Key Return Drivers (SHAP Value Contribution)", fontsize=10.5, fontweight='bold', color='#1a2238', pad=15)
+    plt.tight_layout()
+    return fig
 
 with col_model:
     st.markdown(f"<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Model Analytics: {selected_ticker}</h4>", unsafe_allow_html=True)
     
-    # Corrected vocabulary to acknowledge out-of-sample holdout tracking honestly
+    # Real cross-validation metrics
     st.markdown(f"""
         <div class='metric-card' style='border-left: 4px solid #c8a84b;'>
-            <div class='metric-label'>Out-of-Sample Test Performance</div>
-            <div class='metric-value'>R² = {model_r2:.4f}</div>
+            <div class='metric-label'>Cross-Validation R² Score (Walk-Forward)</div>
+            <div class='metric-value'>R² = {metrics['mean_cv_r2']:.4f}</div>
+            <div style='font-size:0.8rem; color:#6c757d; margin-top:0.4rem;'>Benchmark (Zero-Return Model) R²: <b>{metrics['mean_baseline_r2']:.4f}</b></div>
         </div>
     """, unsafe_allow_html=True)
     
     st.markdown(f"""
         <div class='metric-card'>
-            <div class='metric-label'>Current Base Price [{selected_ticker}]</div>
+            <div class='metric-label'>Current Price [{selected_ticker}]</div>
             <div class='metric-value'>${current_price:.2f}</div>
             <div style='font-size:0.8rem; color:#6c757d; margin-top:0.4rem;'>Estimated 30-Day Target: <b>${target_price:.2f}</b></div>
         </div>
         <div class='metric-card'>
-            <div class='metric-label'>Predicted 30-Day Return</div>
+            <div class='metric-label'>Model 30-Day Expected Return</div>
             <div class='metric-value' style='color: {"#4a7c59" if pred_30d_return >= 0 else "#8f3f3f"};'>
-                {"+" if pred_30d_return >= 0 else ""}{pred_30d_return:.2f}%
+                {"+" if pred_30d_return >= 0 else ""}{pred_30d_return*100.0:.2f}%
             </div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Cleaned up naming structure to represent the module honestly
-    st.markdown("<div style='font-size:0.75rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin-bottom:0.5rem;'>Factor Sensitivity Ranking (Marginal Contribution Analysis)</div>", unsafe_allow_html=True)
-    st.markdown(f"""
-        <div style='background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 1rem; border-radius: 4px; font-size:0.85rem;'>
-            <div class='status-row'><span>🟢 Biggest Positive Driver</span><span class='text-safe'>{biggest_positive_name} ({biggest_positive_val:+.4f} Δ)</span></div>
-            <div class='status-row'><span>🔴 Biggest Negative Driver</span><span class='text-crit'>{biggest_negative_name} ({biggest_negative_val:+.4f} Δ)</span></div>
+            <div style='font-size:0.8rem; color:#6c757d; margin-top:0.4rem;'>SHAP Expected Value Base: <b>{metrics['shap_expected_value']*100.0:+.2f}%</b></div>
         </div>
     """, unsafe_allow_html=True)
 
+    # Display real SHAP waterfall plot
+    fig_shap = plot_shap_contributions(shap_vals_array, feature_cols)
+    st.pyplot(fig_shap)
+
 # --- PANEL 3: PROJECTED RESPONSE PROFILE (RIGHT) ---
 with col_scenario:
-    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Projected Response Profile</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #1a2238; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.5rem;'>Projected Trajectory</h4>", unsafe_allow_html=True)
     
-    months = np.arange(1, 13, 1)
+    # Load historical stock prices
+    @st.cache_data
+    def load_historical_prices(ticker):
+        conn = sqlite3.connect(DB_PATH)
+        query = """
+        SELECT date, close_price 
+        FROM stock_prices 
+        WHERE ticker = ? 
+        ORDER BY date DESC 
+        LIMIT 90
+        """
+        df = pd.read_sql_query(query, conn, params=[ticker])
+        conn.close()
+        df = df.sort_values('date').reset_index(drop=True)
+        df['date'] = pd.to_datetime(df['date'])
+        return df
+
+    hist_df = load_historical_prices(selected_ticker)
     
-    # Establish flat linear projections
-    base_trajectory = np.cumsum(np.repeat(model_baseline * 0.05, 12))
-    scenario_trajectory = np.cumsum(np.repeat(pred_30d_return * 0.05, 12))
+    # Generate 30-day projection coordinates
+    latest_hist_date = hist_df['date'].iloc[-1]
+    latest_hist_price = hist_df['close_price'].iloc[-1]
     
-    chart_df = pd.DataFrame({
-        'Timeline (Months)': months,
-        'Base Expectation Profile (%)': base_trajectory,
-        'User Scenario Response (%)': scenario_trajectory
-    }).set_index('Timeline (Months)')
+    proj_dates = pd.date_range(start=latest_hist_date + pd.Timedelta(days=1), periods=30, freq='D')
+    proj_prices = np.linspace(latest_hist_price, target_price, len(proj_dates))
     
-    st.line_chart(chart_df, color=["#6c757d", "#c8a84b"], height=190)
+    # Build chart frame
+    df_plot_hist = pd.DataFrame({
+        'Date': hist_df['date'],
+        'Historical': hist_df['close_price'],
+        'Projected': np.nan
+    })
+    
+    df_plot_proj = pd.DataFrame({
+        'Date': proj_dates,
+        'Historical': np.nan,
+        'Projected': proj_prices
+    })
+    
+    # Connect historical to projection smoothly
+    df_plot_proj = pd.concat([
+        pd.DataFrame({
+            'Date': [latest_hist_date],
+            'Historical': [np.nan],
+            'Projected': [latest_hist_price]
+        }),
+        df_plot_proj
+    ], ignore_index=True)
+    
+    chart_df = pd.concat([df_plot_hist, df_plot_proj], ignore_index=True).set_index('Date')
+    
+    st.line_chart(chart_df, color=["#1a2238", "#c8a84b"], height=200)
+    
+    # Scenario response metrics table
+    st.markdown("<div style='font-size:0.75rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin-bottom:0.5rem;'>Scenario Impact Metrics</div>", unsafe_allow_html=True)
+    
+    # Compare scenario against baseline
+    baseline_pred = metrics['shap_expected_value']
+    scenario_diff = pred_30d_return - baseline_pred
     
     st.markdown(f"""
-        <div class='status-row' style='margin-top:0.5rem;'><span>Base Cumulative Expectation</span><b>{base_trajectory[-1]:+.2f}%</b></div>
-        <div class='status-row'><span>Scenario Cumulative Response</span><span style='color: {"#4a7c59" if scenario_trajectory[-1] >= base_trajectory[-1] else "#8f3f3f"};'><b>{scenario_trajectory[-1]:+.2f}%</b></span></div>
+        <div style='background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 1rem; border-radius: 4px; font-size:0.85rem;'>
+            <div class='status-row'><span>Model Average Baseline</span><b>{baseline_pred*100.0:+.2f}%</b></div>
+            <div class='status-row'><span>Scenario Return Expectation</span><b style='color: {"#4a7c59" if pred_30d_return >= 0 else "#8f3f3f"};'>{pred_30d_return*100.0:+.2f}%</b></div>
+            <div class='status-row'><span>Scenario Net Active Return</span><b style='color: {"#4a7c59" if scenario_diff >= 0 else "#8f3f3f"};'>{scenario_diff*100.0:+.2f}%</b></div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:0.75rem; font-weight:600; color:#6c757d; text-transform:uppercase; margin-bottom:0.5rem;'>Model Architecture Info</div>", unsafe_allow_html=True)
+    st.markdown(f"""
+        <div style='background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 1rem; border-radius: 4px; font-size:0.85rem;'>
+            <div class='status-row'><span>Framework</span><b>LightGBM Regressor</b></div>
+            <div class='status-row'><span>Training Rows</span><b>{metrics['n_training_rows']:,}</b></div>
+            <div class='status-row'><span>Total Assets</span><b>{metrics['n_assets']}</b></div>
+            <div class='status-row'><span>Features Configured</span><b>{metrics['n_features']}</b></div>
+        </div>
     """, unsafe_allow_html=True)

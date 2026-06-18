@@ -33,8 +33,48 @@ macro research engine/
 │       └── macro_lgb_model.pkl <-- Serialized binary model parameters
 │
 ├── database.py                 <-- DB schema initializer & constraint builder
-├── pipeline.py                 <-- Automated ETL data ingestion script
-├── trainmodel.py               <-- SQL multi-table join and initial model training
-├── benchmark.py                <-- Validation script pitting the Big Three boosting models
-├── backtest.py                 <-- Historical strategy compounding ledger loop
-└── app.py                      <-- Two-way Streamlit dashboard user interface
+├── pipeline.py                 <-- Automated ETL data ingestion script (integrates FRED CSV)
+├── features.py                 <-- Shared feature engineering module (training & inference alignment)
+├── trainmodel.py               <-- Model training pipeline (LightGBM + SHAP expected values)
+├── benchmark.py                <-- Multi-model accuracy tournament (LightGBM vs XGBoost vs CatBoost)
+├── backtest.py                 <-- Leakage-free walk-forward expanding window strategy simulator
+└── app.py                      <-- Streamlit explorer with real model, database, and SHAP waterfall
+
+---
+
+## 🏃 Setup & Execution Order
+
+To set up the database, download the market data, train the production model, and run the Streamlit dashboard:
+
+1. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Initialize Database Schema:**
+   ```bash
+   python database.py
+   ```
+
+3. **Ingest Market & Macro Data:**
+   Fetches stock, commodity, and Treasury yield data via `yfinance`, and daily inflation expectations (`T10YIE`) directly from FRED's CSV endpoint (no API key required).
+   ```bash
+   python pipeline.py
+   ```
+
+4. **Train Model & Compute SHAP Expected Values:**
+   Joins data, engineers features via `features.py`, trains LightGBM under walk-forward validation, and saves production model + metadata artifacts.
+   ```bash
+   python trainmodel.py
+   ```
+
+5. **Run Streamlit Dashboard:**
+   ```bash
+   streamlit run app.py
+   ```
+
+6. **(Optional) Run Benchmark & Backtest Validation:**
+   ```bash
+   python benchmark.py
+   python backtest.py
+   ```

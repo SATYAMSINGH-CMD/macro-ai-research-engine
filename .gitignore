@@ -2,3 +2,4 @@ __pycache__/
 *.pkl
 data/research_engine.db
 .ipynb_checkpoints/
+catboost_info/
